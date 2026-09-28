@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Submission Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F7F2; --card:#FFFFFF; --ink:#17202E; --muted:#5A6475; --line:#D9DDD3;
+  --stamp:#1E7A54; --stampbg:#E2F1E8; --mark:#F3D35C; --markbg:#FBF3CF; --err:#B3392A; --errbg:#FBE8E4;
+  --accent:#24446C; --accentbg:#E6ECF4; --field:#FFFFFF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#11151C; --card:#1A1F29; --ink:#E8ECF2; --muted:#9BA4B3; --line:#2D3542;
+    --stamp:#5CC693; --stampbg:#15352A; --mark:#E2C15A; --markbg:#3A3214; --err:#F18C7D; --errbg:#3B1F1B;
+    --accent:#93B6E8; --accentbg:#1D2A3D; --field:#141922; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#11151C; --card:#1A1F29; --ink:#E8ECF2; --muted:#9BA4B3; --line:#2D3542;
+  --stamp:#5CC693; --stampbg:#15352A; --mark:#E2C15A; --markbg:#3A3214; --err:#F18C7D; --errbg:#3B1F1B;
+  --accent:#93B6E8; --accentbg:#1D2A3D; --field:#141922; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Figtree,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5}
+h1,h2,h3{font-family:"Bricolage Grotesque",Figtree,system-ui,sans-serif;line-height:1.15;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 64px}
+.top{display:flex;flex-direction:column;gap:16px;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:12px}
+.seal{width:44px;height:44px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:15px;flex:none}
+.brand h1{font-size:26px;font-weight:700}
+.brand p{margin:0;color:var(--muted);font-size:14px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.tabs button{border:0;background:transparent;padding:10px;border-radius:9px;font-weight:600;cursor:pointer;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+
+.panel[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.stack>*+*{margin-top:14px}
+label{display:block;font-weight:600;margin-bottom:6px}
+.hint{margin:0 0 8px;color:var(--muted);font-size:14px}
+input[type=text],input[type=email],input[type=url],input[type=number],select,textarea{width:100%;background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px}
+textarea{min-height:96px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+.row2{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:560px){.row2{grid-template-columns:1fr 1fr}}
+
+.brief{background:var(--accentbg);border-radius:12px;padding:14px 16px;font-size:15px}
+.brief h3{font-size:17px;margin-bottom:4px}
+.brief p{margin:0}
+
+.link{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+.link.ok input{border-color:var(--stamp)}
+.link.bad input{border-color:var(--err)}
+.checks{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.checks li{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--muted);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:5px 11px 5px 6px}
+.dot{width:20px;height:20px;border-radius:50%;border:1.5px dashed var(--line);display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.checks li.ok{color:var(--stamp);background:var(--stampbg);border-color:transparent}
+.checks li.ok .dot{border:0;background:var(--stamp);color:var(--card);animation:stamp .35s ease-out}
+.checks li.bad{color:var(--err);background:var(--errbg);border-color:transparent}
+.checks li.bad .dot{border:0;background:var(--err);color:var(--card)}
+.checks li.wait .dot{border-style:solid;border-color:var(--accent);border-right-color:transparent;animation:spin .8s linear infinite}
+@keyframes stamp{0%{transform:scale(1.8) rotate(-18deg);opacity:0}70%{transform:scale(.92) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.checks li.ok .dot,.checks li.wait .dot{animation:none}}
+.msg{margin:8px 0 0;font-size:14px}
+.msg.bad{color:var(--err)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:12px 18px;font-weight:700;cursor:pointer;background:var(--ink);color:var(--paper)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.good{background:var(--stamp);color:var(--card)}
+.btn.small{padding:8px 12px;font-size:14px}
+.btn.full{width:100%}
+.need{margin:10px 0 0;color:var(--muted);font-size:14px;text-align:center}
+
+.notice{border-radius:12px;padding:16px;background:var(--markbg);border:1px solid var(--mark)}
+.notice h3{font-size:18px;margin-bottom:6px}
+.notice p{margin:0 0 10px}
+.notice.done{background:var(--stampbg);border-color:var(--stamp)}
+.preview{margin-top:18px;font-size:13px;color:var(--muted);border-left:3px solid var(--mark);padding-left:10px}
+
+.subtabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px}
+.subtabs button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:14px}
+.subtabs button[aria-selected="true"]{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.count{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--mark);color:#17202E;font-size:12px;margin-left:4px}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.toolbar select{flex:1;min-width:180px}
+.tally{display:flex;flex-wrap:wrap;gap:16px;font-size:14px;color:var(--muted);margin-bottom:12px}
+.tally b{color:var(--ink);font-size:18px;font-family:"Bricolage Grotesque",sans-serif;margin-right:4px}
+
+.sub{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.sub summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.sub summary::-webkit-details-marker{display:none}
+.sub summary .who{min-width:0}
+.sub summary strong{display:block}
+.sub summary small{display:block;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{flex:none;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--markbg);color:var(--ink);border:1px solid var(--mark)}
+.pill.scored{background:var(--stampbg);border-color:var(--stamp);color:var(--stamp)}
+.tag{font-size:12px;font-weight:600;color:var(--accent);margin-left:6px}
+.sub .body{padding:4px 16px 16px;border-top:1px solid var(--line)}
+.lrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.lrow label{display:flex;align-items:center;gap:10px;margin:0;font-weight:500;cursor:pointer}
+.lrow input{width:20px;height:20px;accent-color:var(--stamp)}
+.grade{display:grid;grid-template-columns:110px 1fr;gap:10px;margin-top:14px;align-items:end}
+.grade .full{grid-column:1/-1}
+.empty{text-align:center;color:var(--muted);padding:28px 12px}
+
+.req{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:10px}
+.req p{margin:6px 0}
+.req blockquote{margin:10px 0;padding:10px 12px;background:var(--paper);border-radius:8px;font-size:15px}
+.req .acts{display:flex;gap:8px;margin-top:10px}
+.status{font-size:13px;font-weight:700}
+.status.approved{color:var(--stamp)} .status.declined{color:var(--err)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--accentbg);color:var(--accent);font-weight:600}
+.types{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.types label{display:flex;gap:8px;align-items:center;font-weight:500;border:1.5px solid var(--line);border-radius:10px;padding:10px;margin:0;cursor:pointer}
+.types input{accent-color:var(--ink);width:18px;height:18px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:10px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="seal" aria-hidden="true">TS</div>
+      <div><h1>Submission desk</h1><p>TS Academy</p></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="student">Submit work</button>
+      <button role="tab" aria-selected="false" data-tab="mod">Moderators</button>
+    </nav>
+  </header>
+
+  <!-- STUDENT -->
+  <section class="panel" id="student">
+    <div class="card" id="formCard">
+      <div class="stack">
+        <div class="row2">
+          <div><label for="sName">Full name</label><input id="sName" type="text" autocomplete="name"></div>
+          <div><label for="sEmail">Email you registered with</label><input id="sEmail" type="email" autocomplete="email" inputmode="email"></div>
+        </div>
+        <div>
+          <label for="sAssign">What are you submitting?</label>
+          <select id="sAssign"></select>
+        </div>
+        <div id="lockBox"></div>
+        <div id="briefBox"></div>
+        <div id="linkBox"></div>
+        <div id="submitBox">
+          <button class="btn full" id="submitBtn" disabled>Submit my work</button>
+          <p class="need" id="needLine"></p>
+        </div>
+      </div>
+      <p class="preview">Preview note: the link type check is real. The "opens for anyone" check is simulated in this preview. Type the word private anywhere in a link to see how a locked link gets rejected. The live version will ask Google, Notion, Canva and Trello directly.</p>
+    </div>
+    <div class="card" id="doneCard" hidden></div>
+  </section>
+
+  <!-- MODERATOR -->
+  <section class="panel" id="mod" hidden>
+    <div class="subtabs" role="tablist">
+      <button role="tab" aria-selected="true" data-sub="subs">Submissions</button>
+      <button role="tab" aria-selected="false" data-sub="reqs">Resubmit requests <span class="count" id="reqCount"></span></button>
+      <button role="tab" aria-selected="false" data-sub="asg">Assignments</button>
+    </div>
+
+    <div id="subs">
+      <div class="toolbar">
+        <select id="mFilter" aria-label="Filter by assignment"></select>
+        <button class="btn small" id="exportBtn">Export spreadsheet</button>
+      </div>
+      <div class="tally" id="tally"></div>
+      <div id="subList"></div>
+    </div>
+
+    <div id="reqs" hidden><div id="reqList"></div></div>
+
+    <div id="asg" hidden>
+      <div id="asgList"></div>
+      <div class="card stack" style="margin-top:14px">
+        <h2 style="font-size:20px">New assignment</h2>
+        <div><label for="aName">Name</label><input id="aName" type="text" placeholder="Week 4 assignment"></div>
+        <div><label for="aInst">Instructions students will see</label><textarea id="aInst"></textarea></div>
+        <div><label for="aMax">Highest score</label><input id="aMax" type="number" min="1" value="20"></div>
+        <div><label>Links students must submit</label><div class="types" id="aTypes"></div></div>
+        <button class="btn" id="aCreate">Create assignment</button>
+      </div>
+      <button class="btn ghost small" id="resetBtn" style="margin-top:24px">Reset demo data</button>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const TYPES = {
+  drive:  {label:'Google Drive folder', hint:'Open the folder in Google Drive, click Share, set it to Anyone with the link, then copy.', re:/^https?:\/\/drive\.google\.com\/(drive\/(u\/\d+\/)?folders\/|open\?id=)[\w-]+/i},
+  gdoc:   {label:'Google Doc', hint:'In your Doc, click Share, set it to Anyone with the link, then copy.', re:/^https?:\/\/docs\.google\.com\/document\/d\/[\w-]+/i},
+  gsheet: {label:'Google Sheet', hint:'In your Sheet, click Share, set it to Anyone with the link, then copy.', re:/^https?:\/\/docs\.google\.com\/spreadsheets\/d\/[\w-]+/i},
+  notion: {label:'Notion page', hint:'In Notion, click Share, then Publish, and copy the public link.', re:/^https?:\/\/([\w-]+\.)?(notion\.so|notion\.site)\/\S+/i},
+  canva:  {label:'Canva design', hint:'In Canva, click Share, set access to Anyone with the link, then copy.', re:/^https?:\/\/(www\.)?(canva\.com\/design\/\S+|canva\.link\/\S+)/i},
+  trello: {label:'Trello board', hint:'Set the board visibility to Public, then copy the board link.', re:/^https?:\/\/(www\.)?trello\.com\/b\/\S+/i}
+};
+const OTHER = [
+  {label:'Google Drive file', re:/^https?:\/\/drive\.google\.com\/file\//i},
+  {label:'Google Slides', re:/^https?:\/\/docs\.google\.com\/presentation\//i},
+  {label:'Google Form', re:/^https?:\/\/(docs\.google\.com\/forms|forms\.gle)\//i},
+  {label:'Trello card', re:/^https?:\/\/(www\.)?trello\.com\/c\//i}
+];
+
+const KEY='tsdesk.v1';
+function seed(){
+  const now=Date.now(), d=86400000;
+  return {
+    assignments:[
+      {id:'a1',name:'VA Capstone project',instructions:'Complete all five tasks and paste each link in its own box. Every link must open for anyone.',max:100,fields:['drive','gdoc','notion','canva','trello']},
+      {id:'a2',name:'Week 3 assignment',instructions:'Write the client welcome email in a Google Doc and build the task tracker in a Google Sheet.',max:20,fields:['gdoc','gsheet']}
+    ],
+    submissions:[
+      {id:'s1',aid:'a1',name:'Adaeze Okafor',email:'adaeze.o@example.com',at:now-2*d,state:'active',reviewed:{},score:null,comment:'',
+        links:{drive:'https://drive.google.com/drive/folders/1AdaezeCapstone',gdoc:'https://docs.google.com/document/d/1AdaezeSOP/edit',notion:'https://adaeze.notion.site/Client-Onboarding-Hub',canva:'https://www.canva.com/design/DAFadaeze/view',trello:'https://trello.com/b/Ad4ezE/launch-board'}},
+      {id:'s2',aid:'a1',name:'Tunde Bakare',email:'tunde.b@example.com',at:now-d,state:'active',reviewed:{},score:null,comment:'',
+        links:{drive:'https://drive.google.com/drive/folders/1TundeCapstone',gdoc:'https://docs.google.com/document/d/1TundeSOP/edit',notion:'https://www.notion.so/Tunde-Inbox-System-8f2a',canva:'https://www.canva.com/design/DAFtunde/view',trello:'https://trello.com/b/Tu7de/content-calendar'}},
+      {id:'s3',aid:'a2',name:'Chioma Nwosu',email:'chioma.n@example.com',at:now-3*d,state:'active',reviewed:{gdoc:true,gsheet:true},score:17,comment:'Clear email. Tracker needs due dates.',
+        links:{gdoc:'https://docs.google.com/document/d/1ChiomaEmail/edit',gsheet:'https://docs.google.com/spreadsheets/d/1ChiomaTracker/edit'}}
+    ],
+    requests:[
+      {id:'r1',aid:'a1',name:'Tunde Bakare',email:'tunde.b@example.com',at:now-3600000,status:'pending',reason:'I pasted my Week 2 Canva design instead of my capstone slides. The correct design is ready and shared.'}
+    ],
+    blocked:4
+  };
+}
+function load(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s);}catch(e){}return seed();}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+let S=load();
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const fmt=t=>new Date(t).toLocaleString(undefined,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+const asg=id=>S.assignments.find(a=>a.id===id);
+const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600);}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  $('#student').hidden=b.dataset.tab!=='student'; $('#mod').hidden=b.dataset.tab!=='mod';
+  if(b.dataset.tab==='mod')renderMod(); else renderAssignOptions();
+});
+document.querySelectorAll('.subtabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.subtabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  ['subs','reqs','asg'].forEach(id=>$('#'+id).hidden=id!==b.dataset.sub);
+});
+
+/* ---------- student ---------- */
+let F={}; // field state per type
+let blockedSeen=new Set();
+
+function renderAssignOptions(){
+  const cur=$('#sAssign').value;
+  $('#sAssign').innerHTML='<option value="">Choose one</option>'+S.assignments.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+  if(asg(cur))$('#sAssign').value=cur;
+}
+
+function lockInfo(){
+  const e=$('#sEmail').value.trim().toLowerCase(), aid=$('#sAssign').value;
+  if(!aid||!emailOk(e))return null;
+  const sub=S.submissions.find(s=>s.state==='active'&&s.aid===aid&&s.email.toLowerCase()===e);
+  const req=S.requests.find(r=>r.aid===aid&&r.email.toLowerCase()===e);
+  return {sub,req,aid,email:e};
+}
+
+function renderStudent(){
+  const a=asg($('#sAssign').value);
+  const li=lockInfo();
+  const lb=$('#lockBox');
+  if(li&&li.sub){
+    const key=li.email+'|'+li.aid;
+    if(!blockedSeen.has(key)){blockedSeen.add(key);S.blocked=(S.blocked||0)+1;persist();}
+    let extra='';
+    if(!li.req){
+      extra=`<p>Made a genuine mistake? You get one request to resubmit. Tell the moderators exactly what went wrong.</p>
+      <div id="reqForm"><button class="btn small" id="reqOpen">Ask to resubmit</button></div>`;
+    }else if(li.req.status==='pending'){
+      extra=`<p>Your resubmit request is waiting for a moderator. Check back later.</p>`;
+    }else if(li.req.status==='declined'){
+      extra=`<p>Your resubmit request was declined. You can't submit this assignment again.</p>`;
+    }else{
+      extra=`<p>You have already used your one resubmission for this assignment.</p>`;
+    }
+    lb.innerHTML=`<div class="notice"><h3>You've already submitted this</h3><p>This email submitted ${esc(asg(li.aid).name)} on ${fmt(li.sub.at)}. Each person gets one submission.</p>${extra}</div>`;
+    const ro=$('#reqOpen');
+    if(ro)ro.onclick=()=>{
+      $('#reqForm').innerHTML=`<label for="reqReason">Why do you need to resubmit?</label>
+        <textarea id="reqReason" placeholder="Be specific. Which link was wrong and what will you send instead?"></textarea>
+        <p class="hint" id="reqHint">At least 40 characters.</p>
+        <button class="btn small" id="reqSend" disabled>Send request</button>`;
+      const ta=$('#reqReason'),sb=$('#reqSend');
+      ta.oninput=()=>{const n=ta.value.trim().length;sb.disabled=n<40;$('#reqHint').textContent=n<40?`At least 40 characters (${n} so far).`:'Ready to send.';};
+      sb.onclick=()=>{
+        S.requests.push({id:uid(),aid:li.aid,name:$('#sName').value.trim()||li.sub.name,email:li.email,reason:ta.value.trim(),at:Date.now(),status:'pending'});
+        persist();toast('Request sent to moderators');renderStudent();
+      };
+    };
+    $('#briefBox').innerHTML='';$('#linkBox').innerHTML='';$('#submitBox').hidden=true;
+    return;
+  }
+  lb.innerHTML='';
+  $('#submitBox').hidden=false;
+  if(!a){$('#briefBox').innerHTML='';$('#linkBox').innerHTML='';F={};updateSubmit();return;}
+  $('#briefBox').innerHTML=`<div class="brief"><h3>${esc(a.name)}</h3><p>${esc(a.instructions)}</p></div>`;
+  const box=$('#linkBox');
+  if(box.dataset.aid!==a.id){
+    box.dataset.aid=a.id;F={};
+    box.innerHTML=a.fields.map(t=>`
+      <div class="link" id="w-${t}">
+        <label for="l-${t}">${TYPES[t].label} link</label>
+        <p class="hint">${esc(TYPES[t].hint)}</p>
+        <input id="l-${t}" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://">
+        <ul class="checks"><li data-k="type"><span class="dot"></span>Right kind of link</li><li data-k="open"><span class="dot"></span>Opens for anyone</li></ul>
+        <p class="msg" id="m-${t}"></p>
+      </div>`).join('');
+    a.fields.forEach(t=>{
+      F[t]={status:'idle',token:0};
+      const inp=$('#l-'+t);let tm;
+      inp.addEventListener('input',()=>{clearTimeout(tm);F[t].status='idle';paint(t,'','','');updateSubmit();tm=setTimeout(()=>check(t),500);});
+      inp.addEventListener('blur',()=>{clearTimeout(tm);if(F[t].status==='idle')check(t);});
+    });
+  }
+  updateSubmit();
+}
+
+function paint(t,typeS,openS,msg,bad){
+  const w=$('#w-'+t);if(!w)return;
+  const [lt,lo]=w.querySelectorAll('.checks li');
+  lt.className=typeS;lo.className=openS;
+  lt.querySelector('.dot').textContent=typeS==='ok'?'✓':typeS==='bad'?'✕':'';
+  lo.querySelector('.dot').textContent=openS==='ok'?'✓':openS==='bad'?'✕':'';
+  const m=$('#m-'+t);m.textContent=msg;m.className='msg'+(bad?' bad':'');
+  w.classList.toggle('ok',typeS==='ok'&&openS==='ok');
+  w.classList.toggle('bad',!!bad);
+}
+
+function check(t){
+  const url=$('#l-'+t).value.trim();
+  const st=F[t];const tok=++st.token;
+  if(!url){st.status='idle';paint(t,'','','');updateSubmit();return;}
+  const fail=(k,msg)=>{st.status='bad';paint(t,k==='type'?'bad':'',k==='open'?'bad':'',msg,true);if(k==='open')$('#w-'+t).querySelector('li[data-k=type]').className='ok',$('#w-'+t).querySelector('li[data-k=type] .dot').textContent='✓';updateSubmit();};
+  if(!/^https?:\/\/\S+\.\S+/i.test(url))return fail('type','That doesn\'t look like a link. It should start with https://');
+  if(!TYPES[t].re.test(url)){
+    let found=null;
+    for(const k in TYPES){if(TYPES[k].re.test(url)){found=TYPES[k].label;break;}}
+    if(!found)for(const o of OTHER){if(o.re.test(url)){found=o.label;break;}}
+    if(t==='drive'&&found==='Google Drive file')return fail('type','This is a single file, not a folder. Paste the link to the whole folder.');
+    return fail('type',found?`This is a ${found} link. This box only takes your ${TYPES[t].label} link.`:`This isn't a ${TYPES[t].label} link. ${TYPES[t].hint}`);
+  }
+  for(const o in F){if(o!==t&&$('#l-'+o)&&$('#l-'+o).value.trim()===url)return fail('type','You pasted this same link in another box.');}
+  st.status='checking';paint(t,'ok','wait','Checking the link opens for anyone...');updateSubmit();
+  setTimeout(()=>{
+    if(tok!==st.token)return;
+    if(/private/i.test(url))return fail('open','This link is locked. Set sharing to Anyone with the link, then paste it again.');
+    st.status='ok';paint(t,'ok','ok','');updateSubmit();
+  },1100);
+}
+
+function updateSubmit(){
+  const a=asg($('#sAssign').value);const miss=[];
+  if(!$('#sName').value.trim())miss.push('your name');
+  if(!emailOk($('#sEmail').value))miss.push('a valid email');
+  if(!a)miss.push('what you are submitting');
+  else a.fields.forEach(t=>{if(!F[t]||F[t].status!=='ok')miss.push(TYPES[t].label);});
+  const checking=a&&a.fields.some(t=>F[t]&&F[t].status==='checking');
+  $('#submitBtn').disabled=miss.length>0;
+  $('#needLine').textContent=checking?'Checking your links...':miss.length?'Still needed: '+miss.join(', '):'Everything checks out. You can only submit once, so look over your links.';
+}
+
+['#sName','#sEmail'].forEach(s=>$(s).addEventListener('input',()=>{updateSubmit();}));
+$('#sEmail').addEventListener('change',renderStudent);
+$('#sEmail').addEventListener('blur',renderStudent);
+$('#sAssign').addEventListener('change',renderStudent);
+
+$('#submitBtn').onclick=()=>{
+  const a=asg($('#sAssign').value);const li=lockInfo();
+  if(!a||!li)return;
+  if(li.sub){renderStudent();return;}
+  const links={};a.fields.forEach(t=>links[t]=$('#l-'+t).value.trim());
+  const resub=!!(li.req&&li.req.status==='approved');
+  S.submissions.push({id:uid(),aid:a.id,name:$('#sName').value.trim(),email:li.email,at:Date.now(),state:'active',links,reviewed:{},score:null,comment:'',resub});
+  persist();
+  $('#formCard').hidden=true;
+  const dc=$('#doneCard');dc.hidden=false;
+  dc.innerHTML=`<div class="notice done"><h3>Received</h3><p>${esc(a.name)} is in. A moderator will grade it. You can't submit this assignment again with ${esc(li.email)}.</p></div>
+    <div class="chips">${a.fields.map(t=>`<span class="chip">✓ ${TYPES[t].label}</span>`).join('')}</div>
+    <button class="btn ghost" id="again" style="margin-top:16px">Submit something else</button>`;
+  $('#again').onclick=()=>{dc.hidden=true;$('#formCard').hidden=false;$('#sAssign').value='';$('#linkBox').dataset.aid='';renderStudent();};
+};
+
+/* ---------- moderator ---------- */
+let openSubs=new Set();
+function renderMod(){
+  const f=$('#mFilter').value||'all';
+  $('#mFilter').innerHTML='<option value="all">All assignments</option>'+S.assignments.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+  $('#mFilter').value=asg(f)?f:'all';
+  renderSubs();renderReqs();renderAsg();
+}
+function currentList(){
+  const f=$('#mFilter').value;
+  return S.submissions.filter(s=>s.state==='active'&&(f==='all'||s.aid===f)).sort((a,b)=>b.at-a.at);
+}
+function renderSubs(){
+  const list=currentList();
+  const scored=list.filter(s=>s.score!==null).length;
+  $('#tally').innerHTML=`<span><b>${list.length}</b>submissions</span><span><b>${scored}</b>scored</span><span><b>${list.length-scored}</b>to grade</span><span><b>${S.blocked||0}</b>repeat attempts blocked</span>`;
+  if(!list.length){$('#subList').innerHTML='<p class="empty">No submissions yet for this assignment.</p>';return;}
+  $('#subList').innerHTML=list.map(s=>{
+    const a=asg(s.aid);if(!a)return '';
+    const pill=s.score!==null?`<span class="pill scored">${s.score}/${a.max}</span>`:'<span class="pill">To grade</span>';
+    return `<details class="sub" data-id="${s.id}" ${openSubs.has(s.id)?'open':''}>
+      <summary><span class="who"><strong>${esc(s.name)}${s.resub?'<span class="tag">Resubmitted</span>':''}</strong><small>${esc(s.email)}</small><small>${esc(a.name)}, ${fmt(s.at)}</small></span>${pill}</summary>
+      <div class="body">
+        ${Object.keys(s.links).map(t=>`<div class="lrow"><label><input type="checkbox" data-rev="${t}" ${s.reviewed[t]?'checked':''}><span>${TYPES[t]?TYPES[t].label:esc(t)}</span></label><a href="${esc(s.links[t])}" target="_blank" rel="noopener noreferrer">Open</a></div>`).join('')}
+        <div class="grade">
+          <div><label for="sc-${s.id}">Score out of ${a.max}</label><input type="number" id="sc-${s.id}" min="0" max="${a.max}" value="${s.score??''}"></div>
+          <div><label for="cm-${s.id}">Comment</label><input type="text" id="cm-${s.id}" value="${esc(s.comment)}"></div>
+          <button class="btn good full" data-save="${s.id}">Save score</button>
+        </div>
+      </div></details>`;
+  }).join('');
+}
+$('#subList').addEventListener('toggle',e=>{const d=e.target;if(d.open)openSubs.add(d.dataset.id);else openSubs.delete(d.dataset.id);},true);
+$('#subList').addEventListener('change',e=>{
+  const t=e.target.dataset.rev;if(!t)return;
+  const s=S.submissions.find(x=>x.id===e.target.closest('.sub').dataset.id);
+  s.reviewed[t]=e.target.checked;persist();
+});
+$('#subList').addEventListener('click',e=>{
+  const id=e.target.dataset.save;if(!id)return;
+  const s=S.submissions.find(x=>x.id===id);const a=asg(s.aid);
+  const v=$('#sc-'+id).value;const n=Number(v);
+  if(v===''||isNaN(n)||n<0||n>a.max){toast(`Enter a score from 0 to ${a.max}`);return;}
+  s.score=n;s.comment=$('#cm-'+id).value.trim();persist();toast('Score saved');renderSubs();
+});
+$('#mFilter').onchange=renderSubs;
+
+function renderReqs(){
+  const pend=S.requests.filter(r=>r.status==='pending').length;
+  $('#reqCount').textContent=pend||'';$('#reqCount').hidden=!pend;
+  if(!S.requests.length){$('#reqList').innerHTML='<p class="empty">No resubmit requests.</p>';return;}
+  const sorted=[...S.requests].sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1)||b.at-a.at);
+  $('#reqList').innerHTML=sorted.map(r=>{
+    const a=asg(r.aid);
+    return `<div class="req"><strong>${esc(r.name)}</strong><p class="hint" style="margin:2px 0">${esc(r.email)}<br>${esc(a?a.name:'')}, ${fmt(r.at)}</p>
+      <blockquote>${esc(r.reason)}</blockquote>
+      ${r.status==='pending'?`<div class="acts"><button class="btn good small" data-ok="${r.id}">Allow resubmission</button><button class="btn ghost small" data-no="${r.id}">Decline</button></div>`
+        :`<span class="status ${r.status}">${r.status==='approved'?'Allowed. Their old submission was removed.':'Declined'}</span>`}
+    </div>`;
+  }).join('');
+}
+$('#reqList').addEventListener('click',e=>{
+  const ok=e.target.dataset.ok,no=e.target.dataset.no;if(!ok&&!no)return;
+  const r=S.requests.find(x=>x.id===(ok||no));
+  if(ok){
+    r.status='approved';
+    S.submissions.forEach(s=>{if(s.state==='active'&&s.aid===r.aid&&s.email.toLowerCase()===r.email.toLowerCase())s.state='replaced';});
+    toast('Allowed. They can submit once more.');
+  }else{r.status='declined';toast('Request declined');}
+  persist();renderMod();
+});
+
+function renderAsg(){
+  $('#asgList').innerHTML=S.assignments.map(a=>`<div class="card" style="margin-bottom:10px"><h3 style="font-size:18px">${esc(a.name)}</h3>
+    <p class="hint" style="margin:6px 0 0">${esc(a.instructions)} Scored out of ${a.max}.</p>
+    <div class="chips">${a.fields.map(t=>`<span class="chip">${TYPES[t].label}</span>`).join('')}</div></div>`).join('');
+  if(!$('#aTypes').children.length)$('#aTypes').innerHTML=Object.keys(TYPES).map(t=>`<label><input type="checkbox" value="${t}">${TYPES[t].label}</label>`).join('');
+}
+$('#aCreate').onclick=()=>{
+  const name=$('#aName').value.trim();const fields=[...document.querySelectorAll('#aTypes input:checked')].map(i=>i.value);
+  const max=Number($('#aMax').value);
+  if(!name){toast('Give the assignment a name');return;}
+  if(!fields.length){toast('Pick at least one link type');return;}
+  if(!(max>0)){toast('Set a highest score above 0');return;}
+  S.assignments.push({id:uid(),name,instructions:$('#aInst').value.trim()||'Paste each link in its own box.',max,fields});
+  persist();$('#aName').value='';$('#aInst').value='';document.querySelectorAll('#aTypes input').forEach(i=>i.checked=false);
+  toast('Assignment created');renderMod();renderAssignOptions();
+};
+$('#resetBtn').onclick=()=>{if(confirm('Reset all demo data?')){S=seed();persist();openSubs.clear();blockedSeen.clear();renderMod();renderAssignOptions();$('#linkBox').dataset.aid='';renderStudent();toast('Demo data reset');}};
+
+/* ---------- export ---------- */
+let dlP=null;
+function getDl(){if(!dlP)dlP=(window.claude&&typeof window.claude.use==='function')?window.claude.use('downloads'):Promise.resolve(null);return dlP;}
+const csvCell=v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+$('#exportBtn').onclick=async()=>{
+  const list=currentList();
+  if(!list.length){toast('Nothing to export yet');return;}
+  const types=Object.keys(TYPES).filter(t=>list.some(s=>s.links[t]));
+  const head=['Name','Email','Assignment','Submitted',...types.map(t=>TYPES[t].label),'All links reviewed','Score','Out of','Comment','Resubmission'];
+  const rows=list.map(s=>{const a=asg(s.aid);return [s.name,s.email,a.name,new Date(s.at).toLocaleString(),...types.map(t=>s.links[t]||''),Object.keys(s.links).every(t=>s.reviewed[t])?'Yes':'No',s.score??'',a.max,s.comment,s.resub?'Yes':'No'];});
+  const csv=[head,...rows].map(r=>r.map(csvCell).join(',')).join('\n');
+  const dl=await getDl();
+  if(!dl){toast('Export works in the published page');return;}
+  try{await dl.save({filename:`submissions-${new Date().toISOString().slice(0,10)}.csv`,data:csv});toast('Spreadsheet saved');}
+  catch(e){if(e&&e.code==='declined')return;toast(e&&e.code==='rate_limited'?'Try again in a moment':'Export is not available here');}
+};
+
+renderAssignOptions();renderStudent();getDl();
+</script>
+</body>
+</html>

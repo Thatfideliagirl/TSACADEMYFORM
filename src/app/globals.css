@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* Brand tokens from the TS Academy logo. Change colours here and the whole app follows. */
+:root {
+  --brand: #1a5bb8;
+  --brand-dark: #144a98;
+  --navy: #0f2544;
+  --sky: #eef4fc;
+  --sky-deep: #dce8f8;
+  --line: #d3dfee;
+  --muted: #52627a;
+  --pass: #1c7c4f;
+  --fail: #b23a2c;
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-navy: var(--navy);
+  --color-sky: var(--sky);
+  --color-sky-deep: var(--sky-deep);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-pass: var(--pass);
+  --color-fail: var(--fail);
+  --font-sans: var(--font-albert), system-ui, sans-serif;
+  --font-display: var(--font-outfit), var(--font-albert), system-ui, sans-serif;
+}
+
+body {
+  background: #ffffff;
+  color: var(--navy);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
