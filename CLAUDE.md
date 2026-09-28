@@ -15,6 +15,22 @@ How to work with him:
 
 A working visual prototype of version one is in `reference/submission-desk.html`. Open it to see the look and the live link check ticks. Keep that feel, but the real app follows the structure in this brief.
 
+## Version 2 decisions (these override anything below that disagrees)
+
+Coco changed the design after the first draft. Where the sections below say something different, follow this section. The rest of the file gets cleaned up at Stage 10.
+
+1. Name. The app is called TS Academy Submit.
+2. Structure. Cohort comes first. Admin creates a cohort, then adds courses inside it (about seven, sometimes more). Each course inside a cohort ("cohort course") has its own student list, its own tasks and its own form links. Courses are kept apart, so one course never sees another course's data.
+3. Student lists belong to one cohort course. Name and email are matched against that list only.
+4. Form links. Every cohort course gets one permanent form link. The form has a display name that admins or moderators choose, and that name shows on the form. On the form the student first picks what they are submitting, grouped as Assignments and Capstone. Every task also has its own direct link that skips that choice. Students see no landing page, no dashboard, nothing except the form and a success screen ("Congratulations, you submitted successfully").
+5. Staff landing page. The landing page is only for admins and moderators, and it does one thing: sign in. It must look academic, calm and polished, never vague or odd.
+6. Staff sign in. Admin adds a person's email. The system makes a single use invite code for that email. The person opens TS Academy Submit, enters email and code, then is asked to set a password. From then on they sign in with email and password. Admin can make a new code if someone is locked out. Sessions stay signed in for a long time so nobody is kicked out mid marking.
+7. Roles. Only admins can create cohorts, add courses to a cohort, invite people, and give moderators their cohort courses. Everything else is shared by admins and moderators, and a moderator only sees the cohort courses given to them (including uploading student lists, creating tasks, marking, requests and exports).
+8. Moderators are assigned per cohort course. When a new cohort starts the admin assigns moderators again. A moderator's dashboard lists every cohort they belong to.
+9. Table changes. courses becomes a plain list of course names. cohorts is top level (name, slug, is_open). New table cohort_courses (id, cohort_id, course_id, form_name, form_slug, is_open). students, tasks and course_moderators point to cohort_courses instead of cohorts and courses. New table invites (email, role, code_hash, used_at, created_by). Tasks also get a slug for the direct link.
+10. Brand. Colours: logo blue #1A5BB8, deep navy #0F2544, sky tint #EEF4FC, white. Green #1C7C4F and red #B23A2C only for link check results. Fonts: Outfit for headings, Albert Sans for body and forms. The logo is in reference/brand/ts-academy-logo.jpg. Do not use yellow.
+11. The visual plan is at https://claude.ai/artifact/JQXHhpKYBy6ETe8HXSvdJ5 (Coco's private artifact).
+
 ## The problem
 
 TS Academy collects student assignments with Google Forms. Moderators then mark them by hand in a shared spreadsheet. The problems:
