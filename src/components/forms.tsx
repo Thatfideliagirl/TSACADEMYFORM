@@ -41,7 +41,7 @@ export function ActivateForm() {
       <Field id="password" label="Choose a password" type="password" autoComplete="new-password" hint="At least 8 characters." />
       <Field id="confirm" label="Type the password again" type="password" autoComplete="new-password" />
       <ErrorLine message={state?.error} />
-      <SubmitButton>Create my password</SubmitButton>
+      <SubmitButton>Create my account</SubmitButton>
     </form>
   );
 }

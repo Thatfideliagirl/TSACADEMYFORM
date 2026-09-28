@@ -49,14 +49,14 @@ export function AuthShell({ eyebrow, title, intro, children }: {
 
 export const inputClass = "w-full rounded-xl border-[1.5px] border-line bg-white px-4 py-3 text-base focus:border-brand focus:outline-none";
 
-export function AuthTabs({ active }: { active: "sign-in" | "activate" }) {
+export function AuthTabs({ active }: { active: "sign-in" | "sign-up" }) {
   const base = "flex-1 rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition";
   return (
-    <nav aria-label="Sign in or activate" className="mb-6 flex gap-1 rounded-xl bg-sky p-1">
+    <nav aria-label="Sign in or sign up" className="mb-6 flex gap-1 rounded-xl bg-sky p-1">
       <Link href="/sign-in" aria-current={active === "sign-in" ? "page" : undefined}
         className={`${base} ${active === "sign-in" ? "bg-white text-navy shadow-sm" : "text-muted hover:text-navy"}`}>Sign in</Link>
-      <Link href="/activate" aria-current={active === "activate" ? "page" : undefined}
-        className={`${base} ${active === "activate" ? "bg-white text-navy shadow-sm" : "text-muted hover:text-navy"}`}>First time here</Link>
+      <Link href="/sign-up" aria-current={active === "sign-up" ? "page" : undefined}
+        className={`${base} ${active === "sign-up" ? "bg-white text-navy shadow-sm" : "text-muted hover:text-navy"}`}>Sign up</Link>
     </nav>
   );
 }

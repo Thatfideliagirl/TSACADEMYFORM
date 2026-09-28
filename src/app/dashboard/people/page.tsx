@@ -34,7 +34,7 @@ export default async function PeoplePage() {
 
       {!!invites?.length && (
         <section>
-          <h2 className="mb-3 font-display text-xl font-semibold">Waiting to activate</h2>
+          <h2 className="mb-3 font-display text-xl font-semibold">Waiting to sign up</h2>
           <ul className="flex flex-col gap-2">
             {invites.map((i) => (
               <li key={i.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line bg-white px-4 py-3">

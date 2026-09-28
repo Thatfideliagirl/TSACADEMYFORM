@@ -19,7 +19,7 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    return { error: "That email and password do not match. First time here? Choose First time here above." };
+    return { error: "That email and password do not match. New here? Choose Sign up above." };
   }
   redirect("/dashboard");
 }

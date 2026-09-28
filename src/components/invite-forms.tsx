@@ -15,7 +15,7 @@ export function CodeBox({ state }: { state: CodeState }) {
         <code className="font-display text-2xl font-semibold tracking-widest">{state.code}</code>
         <CopyButton text={state.code} />
       </div>
-      <p className="mt-2 text-sm text-muted">They open the site, choose Activate your account, and enter their email and this code.</p>
+      <p className="mt-2 text-sm text-muted">They open the site, click Sign up, and enter their email and this code.</p>
     </div>
   );
 }
