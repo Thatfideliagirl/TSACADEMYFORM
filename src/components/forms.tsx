@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { signIn, activate } from "@/app/actions/auth";
 import { SubmitButton } from "./submit-button";
 import { inputClass } from "./auth-shell";
@@ -28,10 +27,6 @@ export function SignInForm() {
       <Field id="password" label="Password" type="password" autoComplete="current-password" />
       <ErrorLine message={state?.error} />
       <SubmitButton>Sign in</SubmitButton>
-      <p className="rounded-xl bg-sky px-4 py-3 text-sm text-muted">
-        First time here? An admin adds your email and gives you an invite code.{" "}
-        <Link href="/activate" className="font-semibold text-brand underline">Activate your account</Link>
-      </p>
     </form>
   );
 }
@@ -47,9 +42,6 @@ export function ActivateForm() {
       <Field id="confirm" label="Type the password again" type="password" autoComplete="new-password" />
       <ErrorLine message={state?.error} />
       <SubmitButton>Create my password</SubmitButton>
-      <p className="text-sm text-muted">
-        Already have a password? <Link href="/" className="font-semibold text-brand underline">Sign in</Link>
-      </p>
     </form>
   );
 }

@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard"><Image src="/ts-academy-logo.png" alt="TS Academy" width={359} height={79} className="h-8 w-auto" /></Link>
             <nav className="flex gap-1 text-sm font-semibold">
               <Link href="/dashboard" className="rounded-lg px-3 py-2 hover:bg-sky">Cohorts</Link>
-              {profile.role === "admin" && <Link href="/dashboard/people" className="rounded-lg px-3 py-2 hover:bg-sky">People</Link>}
+              {profile.role === "admin" && <><Link href="/dashboard/courses" className="rounded-lg px-3 py-2 hover:bg-sky">Courses</Link><Link href="/dashboard/people" className="rounded-lg px-3 py-2 hover:bg-sky">People</Link></>}
             </nav>
           </div>
           <div className="flex items-center gap-4 text-sm">

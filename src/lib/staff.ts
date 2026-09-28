@@ -17,7 +17,7 @@ export const getStaff = cache(async () => {
 
 export async function requireStaff() {
   const staff = await getStaff();
-  if (!staff) redirect("/");
+  if (!staff) redirect("/sign-in");
   return staff;
 }
 

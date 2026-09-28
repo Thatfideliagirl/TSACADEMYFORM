@@ -19,7 +19,7 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    return { error: "That email and password do not match. First time here? Use Activate your account." };
+    return { error: "That email and password do not match. First time here? Choose First time here above." };
   }
   redirect("/dashboard");
 }
@@ -27,7 +27,7 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/");
+  redirect("/sign-in");
 }
 
 // The very first admin has no invite, so the setup email and code come from private settings.
@@ -105,7 +105,6 @@ export async function activate(_prev: FormState, formData: FormData): Promise<Fo
   }
   if (invite) await db.from("invites").update({ used_at: new Date().toISOString() }).eq("id", invite.id);
 
-  const supabase = await createClient();
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-  redirect(signInError ? "/" : "/dashboard");
+  // Account is ready. Send them to sign in with the password they just chose.
+  redirect("/sign-in?activated=1");
 }
