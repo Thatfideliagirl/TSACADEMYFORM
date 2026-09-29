@@ -51,8 +51,9 @@ export function NotificationBell() {
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("touchstart", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
 
-  if (hidden) return null;
-  const count = data?.count ?? 0;
+  // Nothing is drawn until the server has answered, so the bell never flashes and then vanishes.
+  if (hidden || !data) return null;
+  const count = data.count;
 
   async function markSeen() {
     if (!data) return;
