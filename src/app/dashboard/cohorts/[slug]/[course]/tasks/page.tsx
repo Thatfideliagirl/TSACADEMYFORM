@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { getCourseContext } from "@/lib/course-context";
 import { siteOrigin } from "@/lib/origin";
 import { showLagos } from "@/lib/lagos";
@@ -32,7 +33,7 @@ export default async function TasksPage({ params, searchParams }: {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link href={base} className="text-sm font-semibold text-brand">← {course.name}, {cohort.name}</Link>
+        <BackLink href={base}>{course.name}, {cohort.name}</BackLink>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-3xl font-semibold tracking-tight">Tasks</h1>
           <Link href={`${base}/tasks/new`} className="rounded-xl bg-brand px-5 py-2.5 font-display font-semibold text-white hover:bg-brand-dark">New task</Link>

@@ -18,6 +18,8 @@ export async function proxy(request: NextRequest) {
     return notice("Setup is not finished",
       `<p>This site is missing: <b>${missing.join(", ")}</b>.</p><p>In Vercel open Settings, then Environment Variables, add ${missing.length > 1 ? "them" : "it"}, then redeploy.</p>`, 503);
   }
+  // The student form has no sign in, so there is nothing to refresh or protect there.
+  if (request.nextUrl.pathname.startsWith("/submit")) return NextResponse.next();
   let response = NextResponse.next({ request });
   let user;
   try {

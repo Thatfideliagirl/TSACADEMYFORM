@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { getCourseContext } from "@/lib/course-context";
 import { Banner } from "@/components/banner";
 import { TaskForm } from "@/components/task-form";
@@ -14,7 +14,7 @@ export default async function NewTaskPage({ params, searchParams }: {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href={`/dashboard/cohorts/${cohort.slug}/${course.slug}/tasks`} className="text-sm font-semibold text-brand">← Tasks</Link>
+        <BackLink href={`/dashboard/cohorts/${cohort.slug}/${course.slug}/tasks`}>Tasks</BackLink>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">New task</h1>
         <p className="mt-1 text-muted">{course.name}, {cohort.name}</p>
       </div>

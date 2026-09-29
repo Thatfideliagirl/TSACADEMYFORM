@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { getCourseContext } from "@/lib/course-context";
 import { Banner } from "@/components/banner";
 import { RosterUploader } from "@/components/roster-uploader";
@@ -31,7 +32,7 @@ export default async function StudentsPage({ params, searchParams }: {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link href={`/dashboard/cohorts/${cohort.slug}/${course.slug}`} className="text-sm font-semibold text-brand">← {course.name}, {cohort.name}</Link>
+        <BackLink href={`/dashboard/cohorts/${cohort.slug}/${course.slug}`}>{course.name}, {cohort.name}</BackLink>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">Students</h1>
         <p className="mt-2 max-w-2xl text-muted">
           This is the list the form checks. A student can only submit if the name and email they type match a row here.
