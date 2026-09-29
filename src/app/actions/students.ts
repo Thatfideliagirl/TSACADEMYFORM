@@ -1,0 +1,78 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { requireStaff } from "@/lib/staff";
+import { checkRows, EMAIL_RE, cleanName, normaliseEmail, PROBLEM_TEXT, type RowProblem } from "@/lib/roster";
+
+const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
+const listPath = (f: FormData) => `/dashboard/cohorts/${str(f, "cohort_slug")}/${str(f, "course_slug")}/students`;
+const back = (path: string, kind: "error" | "ok", message: string): never => redirect(`${path}?${kind}=${encodeURIComponent(message)}`);
+
+export type ImportResult = { error?: string; added?: number; skipped?: { reason: string; count: number }[] };
+
+// Re-checks every row on the server (the browser preview is a convenience, not trusted), then saves the clean ones.
+export async function importStudents(cohortCourseId: string, rows: { name: string; email: string }[]): Promise<ImportResult> {
+  const { supabase } = await requireStaff();
+  if (!Array.isArray(rows) || rows.length === 0) return { error: "There are no rows to import." };
+  if (rows.length > 5000) return { error: "That file has more than 5000 rows. Split it into smaller files." };
+
+  const existing: string[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from("students").select("email").eq("cohort_course_id", cohortCourseId).range(from, from + 999);
+    if (error) return { error: "Could not read the current student list. Please try again." };
+    existing.push(...(data ?? []).map((r) => r.email));
+    if (!data || data.length < 1000) break;
+  }
+
+  const checked = checkRows(rows.map((r) => ({ name: String(r.name ?? ""), email: String(r.email ?? "") })), existing);
+  const clean = checked.filter((r) => r.problem === "ok");
+  for (let i = 0; i < clean.length; i += 500) {
+    const chunk = clean.slice(i, i + 500).map((r) => ({ cohort_course_id: cohortCourseId, full_name: r.name, email: r.email }));
+    const { error } = await supabase.from("students").insert(chunk);
+    if (error) return { error: "Saving stopped part way. Check the list, then upload the file again. Students already saved are skipped." };
+  }
+
+  const tally = new Map<RowProblem, number>();
+  for (const r of checked) if (r.problem !== "ok") tally.set(r.problem, (tally.get(r.problem) ?? 0) + 1);
+  revalidatePath("/dashboard", "layout");
+  return {
+    added: clean.length,
+    skipped: [...tally.entries()].map(([p, count]) => ({ reason: PROBLEM_TEXT[p as Exclude<RowProblem, "ok">], count })),
+  };
+}
+
+export async function addStudent(formData: FormData) {
+  const { supabase } = await requireStaff();
+  const name = cleanName(str(formData, "full_name"));
+  const email = normaliseEmail(str(formData, "email"));
+  const path = listPath(formData);
+  if (!name) back(path, "error", "Type the student's full name.");
+  if (!EMAIL_RE.test(email)) back(path, "error", "That email is not typed correctly.");
+  const { error } = await supabase.from("students").insert({ cohort_course_id: str(formData, "cohort_course_id"), full_name: name, email });
+  if (error) back(path, "error", error.code === "23505" ? "That email is already on this list." : "Could not add the student.");
+  revalidatePath("/dashboard", "layout");
+  back(path, "ok", `${name} added.`);
+}
+
+export async function updateStudent(formData: FormData) {
+  const { supabase } = await requireStaff();
+  const name = cleanName(str(formData, "full_name"));
+  const email = normaliseEmail(str(formData, "email"));
+  const path = listPath(formData);
+  if (!name) back(path, "error", "A student needs a name.");
+  if (!EMAIL_RE.test(email)) back(path, "error", "That email is not typed correctly.");
+  const { error } = await supabase.from("students").update({ full_name: name, email }).eq("id", str(formData, "id"));
+  if (error) back(path, "error", error.code === "23505" ? "Another student on this list already has that email." : "Could not save the change.");
+  revalidatePath("/dashboard", "layout");
+  back(path, "ok", "Student saved.");
+}
+
+export async function deleteStudent(formData: FormData) {
+  const { supabase } = await requireStaff();
+  const path = listPath(formData);
+  const { error } = await supabase.from("students").delete().eq("id", str(formData, "id"));
+  if (error) back(path, "error", "Could not remove the student.");
+  revalidatePath("/dashboard", "layout");
+  back(path, "ok", "Student removed. Anything they submitted was removed with them.");
+}
