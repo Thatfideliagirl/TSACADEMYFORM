@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const labelOf = (k: string) => types.find((t) => t.key === k)?.label ?? k;
 
     const subs = taskIds.length ? await all((f, t) => supabase.from("submissions")
-      .select("id, task_id, links, unverified_links, reviewed, submitted_at, score, comment, graded_by, changed_after_grading, students(full_name, email)")
+      .select("id, task_id, links, unverified_links, reviewed, submitted_at, score, comment, graded_by, changed_after_grading, resubmit_asked, resubmitted_at, students(full_name, email)")
       .in("task_id", taskIds).order("submitted_at").range(f, t)) : [];
     const reqs = taskIds.length ? await all((f, t) => supabase.from("requests").select("submission_id, kind, status").in("task_id", taskIds).range(f, t)) : [];
     const reqBy = new Map(reqs.map((r) => [r.submission_id, r]));
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     header = ["Full name", "Email", "Cohort", "Task", "Type", "Submitted at",
       ...(has("links") ? keys.map(labelOf) : []),
       ...(has("score") ? ["Score", "Out of", "Comment"] : []),
-      ...(has("marking") ? ["All links reviewed", "Request used", "Graded by", "Changed after grading"] : [])];
+      ...(has("marking") ? ["All links reviewed", "Request used", "Graded by", "Changed after grading", "Resubmission"] : [])];
     const taskBy = new Map((tasks ?? []).map((t) => [t.id, t]));
     rows = subs.map((s) => {
       const st = first(s.students as One<{ full_name: string; email: string }>);
@@ -95,6 +95,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           r ? `${r.kind === "note" ? "Note" : "Replace link"} (${r.status})` : "No",
           s.graded_by ? names.get(s.graded_by) ?? "" : "",
           s.changed_after_grading ? "Yes" : "No",
+          s.resubmit_asked ? "Waiting for resubmission" : s.resubmitted_at ? "Resubmitted" : "",
         ] : []),
       ];
     });

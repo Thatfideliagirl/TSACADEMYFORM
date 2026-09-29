@@ -42,6 +42,7 @@ export default async function CoursePage({ params, searchParams }: {
     ["Students who have submitted", stats.studentsSent, "", `of ${stats.students} students`],
     ["Marked", stats.graded, "", "submissions"],
     ["Waiting to be marked", stats.waiting, stats.waiting > 0 ? "text-brand" : "", "submissions"],
+    ["Waiting for resubmission", stats.waitingResubmit, stats.waitingResubmit > 0 ? "text-brand" : "", "students to resend"],
     ["Pending requests", stats.pendingRequests, stats.pendingRequests > 0 ? "text-fail" : "", "to decide"],
   ];
 
@@ -54,7 +55,7 @@ export default async function CoursePage({ params, searchParams }: {
         <p className="mt-1 text-muted">{cohort.name}</p>
       </div>
 
-      <CourseNav base={base} active="" pending={stats.pendingRequests} />
+      <CourseNav base={base} active="" pending={stats.pendingRequests} resubmit={stats.waitingResubmit} />
       <Banner error={error} ok={ok} />
 
       <section className="flex flex-col gap-4">
@@ -67,7 +68,7 @@ export default async function CoursePage({ params, searchParams }: {
             ))}
           </div>
         </div>
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {tiles.map(([label, n, tone, note]) => (
             <div key={label} className="rounded-2xl border border-line bg-white p-4">
               <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>

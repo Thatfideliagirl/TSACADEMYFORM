@@ -2,7 +2,7 @@
 
 import { useHydrated } from "./use-hydrated";
 import { useRef, useState, useTransition } from "react";
-import { checkLink, sendRequest, submitWork, verifyStudent, type TaskInfo } from "@/app/actions/submit";
+import { checkLink, sendRequest, submitResubmission, submitWork, verifyStudent, type TaskInfo } from "@/app/actions/submit";
 import { allTypes, checkLinkType, findType, type LinkDef } from "@/lib/link-types";
 
 type Phase = "idle" | "wrong" | "checking" | "open" | "locked" | "unknown";
@@ -170,7 +170,11 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const seq = useRef<Record<string, number>>({});
 
-  const defs: LinkDef[] = current ? current.required.map((k) => findType(k, current.custom)).filter((d): d is LinkDef => !!d) : [];
+  // When a moderator asked for a resubmission, only the links they switched on can be sent again.
+  const defs: LinkDef[] = current
+    ? current.required.filter((k) => !current.resubmit || current.resubmit.links.includes(k)).map((k) => findType(k, current.custom)).filter((d): d is LinkDef => !!d)
+    : [];
+  const lockedLinks = current?.resubmit ? current.sent.filter((l) => !current.resubmit!.links.includes(l.key)) : [];
   const setCheck = (key: string, c: Check) => setChecks((p) => ({ ...p, [key]: c }));
 
   function evaluate(key: string, vals: Record<string, string>, task: TaskInfo, tk: string) {
@@ -184,6 +188,10 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
 
     const type = checkLinkType(def, url, allTypes(task.custom));
     if (!type.ok) return setCheck(key, { phase: "wrong", message: type.message });
+    if (task.resubmit) {
+      if (norm(task.sent.find((l) => l.key === key)?.url ?? "") === norm(url)) return setCheck(key, { phase: "wrong", message: "This is the same link you sent before. Send the new one." });
+      if (task.sent.some((l) => l.key !== key && !task.resubmit!.links.includes(l.key) && norm(l.url) === norm(url))) return setCheck(key, { phase: "wrong", message: "You already sent this link for another box." });
+    }
     if (list.some((d) => d.key !== key && norm(vals[d.key] ?? "") === norm(url))) {
       return setCheck(key, { phase: "wrong", message: "You pasted this same link in another box.", dup: true });
     }
@@ -215,7 +223,7 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
     Object.values(timers.current).forEach(clearTimeout);
     setValues({}); setChecks({}); setSubmitError("");
     setCurrent(task);
-    setStage(task.submittedAt ? "already" : "fill");
+    setStage(task.submittedAt && !task.resubmit ? "already" : "fill");
   }
 
   function onVerify(e: React.FormEvent) {
@@ -245,6 +253,13 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
     setSubmitError("");
     start(async () => {
       const links = Object.fromEntries(defs.map((d) => [d.key, values[d.key].trim()]));
+      if (current.resubmit) {
+        const again = await submitResubmission({ token, taskSlug: current.slug, links });
+        if (!again.ok) return setSubmitError(again.error);
+        setTasks((p) => p.map((t) => (t.slug === current.slug ? { ...t, resubmit: null } : t)));
+        setDone({ title: current.title, received: again.received });
+        return setStage("done");
+      }
       const r = await submitWork({ token, taskSlug: current.slug, links });
       if (r.ok) {
         setTasks((p) => p.map((t) => (t.slug === current.slug ? { ...t, submittedAt: r.submittedAt } : t)));
@@ -320,10 +335,10 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
               <ul className="flex flex-col gap-2">
                 {list.map((t) => (
                   <li key={t.slug}>
-                    <button type="button" disabled={!!t.submittedAt} onClick={() => begin(t)}
+                    <button type="button" disabled={!!t.submittedAt && !t.resubmit} onClick={() => begin(t)}
                       className="flex w-full items-center justify-between gap-3 rounded-2xl border-[1.5px] border-line bg-white px-5 py-4 text-left font-semibold enabled:hover:border-brand enabled:hover:bg-sky disabled:opacity-70">
                       <span>{t.title}</span>
-                      {t.submittedAt ? <span className="rounded-full bg-[#e1f2e9] px-3 py-1 text-sm font-semibold text-pass">Submitted</span> : <span aria-hidden className="text-brand">→</span>}
+                      {t.resubmit ? <span className="rounded-full bg-brand px-3 py-1 text-sm font-semibold text-white">Please resubmit</span> : t.submittedAt ? <span className="rounded-full bg-[#e1f2e9] px-3 py-1 text-sm font-semibold text-pass">Submitted</span> : <span aria-hidden className="text-brand">→</span>}
                     </button>
                   </li>
                 ))}
@@ -379,7 +394,7 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
               </li>
             ))}
           </ul>
-          {!fixedTask && tasks.some((t) => !t.submittedAt) && (
+          {!fixedTask && tasks.some((t) => !t.submittedAt || t.resubmit) && (
             <button type="button" onClick={() => setStage("pick")} className="rounded-xl border-[1.5px] border-line px-5 py-2.5 font-semibold text-brand hover:bg-sky">Submit another task</button>
           )}
         </div>
@@ -401,13 +416,29 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
           {current?.instructions && <p className="mt-3 whitespace-pre-line rounded-xl bg-sky px-4 py-3 text-[15px]">{current.instructions}</p>}
         </div>
 
+        {current?.resubmit && (
+          <div className={`${card} flex flex-col gap-2 border-brand bg-sky`}>
+            <h3 className="font-display text-lg font-semibold">Feedback from your moderator</h3>
+            <p className="whitespace-pre-line">{current.resubmit.feedback}</p>
+            <p className="text-sm text-muted">Send a new link only for the box{defs.length === 1 ? "" : "es"} below. The links that were fine cannot be changed.</p>
+          </div>
+        )}
+        {lockedLinks.map((l) => (
+          <div key={l.key} className={`${card} flex flex-col gap-1 bg-sky/60`}>
+            <p className="font-semibold">{l.label} link, accepted</p>
+            <p className="truncate text-sm text-muted" title={l.url}>{l.url}</p>
+            <p className="text-sm text-muted">This link cannot be changed.</p>
+          </div>
+        ))}
+
         {defs.map((d) => {
           const c = checks[d.key] ?? { phase: "idle" as Phase, message: "" };
           const t1 = c.phase === "idle" ? "idle" : c.phase === "wrong" ? "bad" : "ok";
           const t2 = c.phase === "checking" ? "wait" : c.phase === "open" ? "ok" : c.phase === "locked" ? "bad" : c.phase === "unknown" ? "maybe" : "idle";
           return (
             <div key={d.key} className={`${card} flex flex-col gap-2 ${c.phase === "open" ? "border-pass" : c.phase === "wrong" || c.phase === "locked" ? "border-fail" : ""}`}>
-              <label htmlFor={`l-${d.key}`} className="font-semibold">{d.label} link</label>
+              <label htmlFor={`l-${d.key}`} className="font-semibold">{current?.resubmit ? `${d.label}, send your new link` : `${d.label} link`}</label>
+              {current?.resubmit && <p className="truncate text-sm text-muted">Before: {current.sent.find((l) => l.key === d.key)?.url}</p>}
               <p className="text-sm text-muted">{d.hint}</p>
               <input id={`l-${d.key}`} type="url" inputMode="url" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="https://"
                 value={values[d.key] ?? ""} onChange={(e) => onLink(d.key, e.target.value)} className={input} />
@@ -423,10 +454,10 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
         <div className="flex flex-col gap-2">
           {submitError && <p role="alert" className="rounded-xl bg-[#fbe9e6] px-4 py-3 text-sm font-medium text-fail">{submitError}</p>}
           <button disabled={!hydrated || !ready || pending} className="rounded-xl bg-brand px-5 py-3.5 font-display text-base font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40">
-            {pending ? "Submitting..." : "Submit my work"}
+            {pending ? "Submitting..." : current?.resubmit ? "Send my new links" : "Submit my work"}
           </button>
           <p className="text-center text-sm text-muted" aria-live="polite">
-            {pending ? "" : checking ? "Checking your links..." : ready ? "Everything checks out. You can only submit once, so look over your links." : `Still needed: ${missing.join(", ")}`}
+            {pending ? "" : checking ? "Checking your links..." : ready ? (current?.resubmit ? "Everything checks out. Look over your new links, then send them." : "Everything checks out. You can only submit once, so look over your links.") : `Still needed: ${missing.join(", ")}`}
           </p>
         </div>
       </form>

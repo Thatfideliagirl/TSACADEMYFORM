@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Item = { id: string; student: string; task: string; where: string; href: string; at: string; isNew: boolean };
+type Item = { id: string; student: string; task: string; where: string; href: string; at: string; isNew: boolean; resubmitted: boolean };
 type Data = { count: number; items: Item[]; now: string };
 
 function ago(iso: string) {
@@ -95,7 +95,7 @@ export function NotificationBell() {
                   <Link href={i.href} onClick={() => { setOpen(false); if (count > 0) { setData({ ...data, count: 0, items: data.items.map((x) => ({ ...x, isNew: false })) }); markSeen(true); } }} className={`flex gap-3 px-4 py-3 hover:bg-sky ${i.isNew ? "bg-sky/60" : ""}`}>
                     <span aria-hidden="true" className={`mt-1.5 h-2.5 w-2.5 flex-none rounded-full ${i.isNew ? "bg-brand" : "bg-transparent"}`} />
                     <span className="min-w-0">
-                      <span className="block text-sm"><span className="font-semibold">{i.student}</span> sent {i.task}</span>
+                      <span className="block text-sm"><span className="font-semibold">{i.student}</span> {i.resubmitted ? "resubmitted" : "sent"} {i.task}</span>
                       <span className="block truncate text-xs text-muted">{i.where}</span>
                       <span className="block text-xs text-muted">{ago(i.at)}{i.isNew ? ", new" : ""}</span>
                     </span>

@@ -5,7 +5,8 @@ import { CourseNav } from "@/components/course-nav";
 import { getCourseContext } from "@/lib/course-context";
 import { allTypes } from "@/lib/link-types";
 import { showLagos } from "@/lib/lagos";
-import { saveGrade } from "@/app/actions/grading";
+import { MarkingForm } from "@/components/marking-form";
+import { siteOrigin } from "@/lib/origin";
 
 type One<T> = T | T[] | null;
 const first = <T,>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v);
@@ -29,14 +30,16 @@ export default async function SubmissionsPage({ params, searchParams }: { params
 
   const page = Math.max(1, Number(sp.page) || 1);
   let q = supabase.from("submissions")
-    .select("id, task_id, links, unverified_links, submitted_at, reviewed, score, comment, graded_at, changed_after_grading, students!inner(full_name, email), tasks!inner(slug, title, kind, max_score, cohort_course_id), graded:profiles!submissions_graded_by_fkey(full_name)", { count: "exact" })
+    .select("id, task_id, links, unverified_links, submitted_at, reviewed, score, comment, graded_at, changed_after_grading, resubmit_asked, resubmit_links, resubmit_feedback, resubmitted_at, students!inner(full_name, email), tasks!inner(slug, title, kind, max_score, cohort_course_id), graded:profiles!submissions_graded_by_fkey(full_name)", { count: "exact" })
     .eq("tasks.cohort_course_id", cc.id)
     .order("submitted_at", { ascending: false })
     .range((page - 1) * PAGE, page * PAGE - 1);
   if (sp.task) q = q.eq("tasks.slug", sp.task);
   if (sp.kind === "assignment" || sp.kind === "capstone") q = q.eq("tasks.kind", sp.kind);
   if (sp.graded === "graded") q = q.not("score", "is", null);
-  if (sp.graded === "ungraded") q = q.is("score", null);
+  if (sp.graded === "ungraded") q = q.is("score", null).eq("resubmit_asked", false);
+  if (sp.graded === "asked") q = q.eq("resubmit_asked", true);
+  if (sp.graded === "resubmitted") q = q.not("resubmitted_at", "is", null).eq("resubmit_asked", false).is("score", null);
   const term = (sp.q ?? "").trim().replace(/[%,()]/g, " ");
   if (term) q = q.or(`full_name.ilike.%${term}%,email.ilike.%${term}%`, { referencedTable: "students" });
   const { data: rows, count } = await q;
@@ -47,6 +50,15 @@ export default async function SubmissionsPage({ params, searchParams }: { params
     ? await supabase.from("requests").select("submission_id, kind, link_type, new_url, reason, status").in("submission_id", ids)
     : { data: [] };
   const reqBy = new Map((reqs ?? []).map((r) => [r.submission_id, r]));
+
+  // For work that came back, the link each student had before, so the moderator sees what changed.
+  const backIds = (rows ?? []).filter((r) => r.resubmitted_at).map((r) => r.id);
+  const { data: hist } = backIds.length
+    ? await supabase.from("submission_link_history").select("submission_id, link_type, old_url, changed_at").in("submission_id", backIds).order("changed_at", { ascending: false })
+    : { data: [] };
+  const beforeBy = new Map<string, string>();
+  for (const h of hist ?? []) { const k = `${h.submission_id}:${h.link_type}`; if (!beforeBy.has(k)) beforeBy.set(k, h.old_url); }
+  const origin = await siteOrigin();
 
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
@@ -79,7 +91,7 @@ export default async function SubmissionsPage({ params, searchParams }: { params
           </select></div>
         <div className="flex min-w-[10rem] flex-1 flex-col gap-1"><label htmlFor="f-graded" className="text-xs font-semibold text-muted">Marking</label>
           <select id="f-graded" name="graded" defaultValue={sp.graded ?? ""} className={field}>
-            <option value="">Marked and unmarked</option><option value="ungraded">Waiting to be marked</option><option value="graded">Marked</option>
+            <option value="">Marked and unmarked</option><option value="ungraded">Waiting to be marked</option><option value="graded">Marked</option><option value="asked">Asked to resubmit</option><option value="resubmitted">Resubmitted, ready to mark</option>
           </select></div>
         <div className="flex min-w-[10rem] flex-1 flex-col gap-1"><label htmlFor="f-q" className="text-xs font-semibold text-muted">Name or email</label>
           <input id="f-q" name="q" defaultValue={sp.q ?? ""} placeholder="Search" className={field} /></div>
@@ -143,40 +155,24 @@ export default async function SubmissionsPage({ params, searchParams }: { params
                         ? <span className="rounded-full bg-[#fbe9e6] px-2.5 py-0.5 text-xs font-semibold text-fail">{stillOpen.length} link{stillOpen.length === 1 ? "" : "s"} not verified</span>
                         : <span className="rounded-full bg-[#e1f2e9] px-2.5 py-0.5 text-xs font-semibold text-pass">{unverified.length > 0 ? "Links checked" : "Links verified"}</span>}
                       {req?.status === "pending" && <span className="rounded-full bg-[#fbe9e6] px-2.5 py-0.5 text-xs font-semibold text-fail">Request waiting</span>}
-                      <span className={`rounded-full px-3 py-1 text-sm font-semibold ${marked ? "bg-[#e1f2e9] text-pass" : "bg-sky-deep"}`}>{marked ? `${r.score} / ${tk?.max_score}` : "To mark"}</span>
+                      {r.resubmit_asked
+                        ? <span className="rounded-full bg-brand px-3 py-1 text-sm font-semibold text-white">Waiting for resubmission</span>
+                        : <span className={`rounded-full px-3 py-1 text-sm font-semibold ${marked ? "bg-[#e1f2e9] text-pass" : "bg-sky-deep"}`}>{marked ? `${r.score} / ${tk?.max_score}` : r.resubmitted_at ? "Resubmitted, ready to mark" : "To mark"}</span>}
                     </span>
                   </summary>
 
-                  <form action={saveGrade} className="flex flex-col gap-4 border-t border-line px-4 py-4">
-                    <input type="hidden" name="submission_id" value={r.id} />
-                    <input type="hidden" name="return_to" value={returnTo} />
-
-                    <ul className="flex flex-col divide-y divide-dashed divide-line">
-                      {Object.entries(links).map(([key, url]) => (
-                        <li key={key} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
-                          <label className="flex min-w-0 cursor-pointer items-start gap-3">
-                            <input type="checkbox" name={`reviewed_${key}`} defaultChecked={!!reviewed[key]} className="mt-1 h-5 w-5 flex-none accent-brand" />
-                            <span className="min-w-0">
-                              <span className="block font-semibold">{labelOf(key)} <span className="font-normal text-muted">reviewed</span></span>
-                              <span className="block truncate text-sm text-muted">{url}</span>
-                              {unverified.includes(key)
-                                ? (confirmed(key)
-                                  ? <span className="text-xs font-semibold text-pass">You checked it. It opens for anyone.</span>
-                                  : <span className="text-xs font-semibold text-fail">Could not verify that this opens for anyone. Check it.</span>)
-                                : <span className="text-xs font-semibold text-pass">Verified. It opens for anyone.</span>}
-                            </span>
-                          </label>
-                          <a href={url} target="_blank" rel="noopener noreferrer" className="rounded-lg border-[1.5px] border-brand px-4 py-1.5 text-sm font-semibold text-brand hover:bg-sky">Open</a>
-                          {unverified.includes(key) && (
-                            <label className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-[1.5px] px-3 py-2 text-sm font-semibold ${confirmed(key) ? "border-pass bg-[#e1f2e9] text-pass" : "border-fail bg-[#fbe9e6] text-fail"}`}>
-                              <input type="checkbox" name={`opens_${key}`} defaultChecked={confirmed(key)} className="h-5 w-5 flex-none accent-brand" />
-                              I opened it and it works for anyone
-                            </label>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-
+                  <MarkingForm
+                    submissionId={r.id} returnTo={returnTo} maxScore={tk?.max_score ?? 0} score={r.score}
+                    comment={r.comment ?? ""} feedback={r.resubmit_feedback ?? ""} asked={!!r.resubmit_asked}
+                    resubmitted={!!r.resubmitted_at && !r.resubmit_asked && (!r.graded_at || r.graded_at < r.resubmitted_at)}
+                    markedInfo={marked && r.graded_at ? `Marked by ${who?.full_name ?? "a moderator"} on ${showLagos(r.graded_at)}` : null}
+                    mail={{ to: st?.email ?? "", firstName: (st?.full_name ?? "").split(" ")[0], taskTitle: tk?.title ?? "", taskLink: `${origin}/submit/${cc.form_slug}/${tk?.slug}` }}
+                    links={Object.entries(links).map(([key, url]) => ({
+                      key, label: labelOf(key), url, reviewed: !!reviewed[key], unverified: unverified.includes(key), confirmed: confirmed(key),
+                      toggled: !!r.resubmit_asked && ((r.resubmit_links ?? []) as string[]).includes(key),
+                      before: r.resubmitted_at ? beforeBy.get(`${r.id}:${key}`) ?? null : null,
+                    }))}
+                  >
                     {req && (
                       <div className="rounded-xl bg-sky px-4 py-3 text-sm">
                         <p className="font-semibold">{req.kind === "note" ? "Note from the student" : `Student asked to replace ${labelOf(req.link_type ?? "")}`}{req.status !== "pending" && `, ${req.status}`}</p>
@@ -184,22 +180,7 @@ export default async function SubmissionsPage({ params, searchParams }: { params
                         {req.status === "pending" && <Link href={`${base}/requests`} className="mt-1 inline-block font-semibold text-brand underline">Go to Requests to decide</Link>}
                       </div>
                     )}
-
-                    <div className="grid gap-3 sm:grid-cols-[9rem_1fr]">
-                      <div className="flex flex-col gap-1">
-                        <label htmlFor={`sc-${r.id}`} className="text-sm font-semibold">Score out of {tk?.max_score}</label>
-                        <input id={`sc-${r.id}`} name="score" type="number" step="any" min={0} max={tk?.max_score} defaultValue={r.score ?? ""} className={field} />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label htmlFor={`cm-${r.id}`} className="text-sm font-semibold">Comment</label>
-                        <textarea id={`cm-${r.id}`} name="comment" rows={2} defaultValue={r.comment} className={field} />
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4">
-                      <button className="rounded-xl bg-brand px-5 py-2.5 font-display font-semibold text-white hover:bg-brand-dark">Save score</button>
-                      {marked && r.graded_at && <span className="text-sm text-muted">Marked by {who?.full_name ?? "a moderator"} on {showLagos(r.graded_at)}</span>}
-                    </div>
-                  </form>
+                  </MarkingForm>
                 </details>
               </li>
             );

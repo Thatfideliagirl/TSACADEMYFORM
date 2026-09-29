@@ -4,7 +4,7 @@ import { showLagos } from "@/lib/lagos";
 
 type One<T> = T | T[] | null;
 const first = <T,>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v);
-type Counts = { cohort_course_id: string; students: number; tasks: number; submissions: number; graded: number; pending_requests: number };
+type Counts = { cohort_course_id: string; students: number; tasks: number; submissions: number; graded: number; pending_requests: number; waiting_resubmit: number };
 
 // The first page after sign in. Admins see everything, moderators see their own courses. Same page, because the
 // database only hands back what each person is allowed to see.
@@ -36,11 +36,12 @@ export default async function Overview() {
       cohort: first(r.cohorts as One<{ name: string; slug: string; is_open: boolean }>),
       course: first(r.courses as One<{ name: string; slug: string }>),
       students: Number(c?.students ?? 0), tasks: Number(c?.tasks ?? 0), submissions: Number(c?.submissions ?? 0),
-      graded: Number(c?.graded ?? 0), pending: Number(c?.pending_requests ?? 0),
+      graded: Number(c?.graded ?? 0), pending: Number(c?.pending_requests ?? 0), asked: Number(c?.waiting_resubmit ?? 0),
     };
   });
   const sum = (f: (r: (typeof list)[number]) => number) => list.reduce((n, r) => n + f(r), 0);
-  const waiting = sum((r) => r.submissions - r.graded);
+  const waiting = sum((r) => r.submissions - r.graded - r.asked);
+  const asking = sum((r) => r.asked);
   const pending = sum((r) => r.pending);
 
   const tiles: [string, string | number, string, string][] = isAdmin && adminBits ? [
@@ -50,17 +51,19 @@ export default async function Overview() {
     ["Students", sum((r) => r.students), "", "across all courses"],
     ["Submissions", sum((r) => r.submissions), "", "received"],
     ["Waiting to be marked", waiting, waiting > 0 ? "text-brand" : "", "submissions"],
+    ["Waiting for resubmission", asking, asking > 0 ? "text-brand" : "", "students to resend"],
     ["Pending requests", pending, pending > 0 ? "text-fail" : "", "to decide"],
   ] : [
     ["Your courses", list.length, "", "given to you"],
     ["Students", sum((r) => r.students), "", "in your courses"],
     ["Submissions", sum((r) => r.submissions), "", "received"],
     ["Waiting to be marked", waiting, waiting > 0 ? "text-brand" : "", "submissions"],
+    ["Waiting for resubmission", asking, asking > 0 ? "text-brand" : "", "students to resend"],
     ["Pending requests", pending, pending > 0 ? "text-fail" : "", "to decide"],
   ];
 
-  const attention = list.filter((r) => r.submissions - r.graded > 0 || r.pending > 0)
-    .sort((a, b) => (b.pending * 1000 + (b.submissions - b.graded)) - (a.pending * 1000 + (a.submissions - a.graded))).slice(0, 6);
+  const attention = list.filter((r) => r.submissions - r.graded - r.asked > 0 || r.pending > 0 || r.asked > 0)
+    .sort((a, b) => (b.pending * 1000 + (b.submissions - b.graded - b.asked)) - (a.pending * 1000 + (a.submissions - a.graded - a.asked))).slice(0, 6);
   const href = (r: (typeof list)[number], tail = "") => `/dashboard/cohorts/${r.cohort?.slug}/${r.course?.slug}${tail}`;
 
   return (
@@ -109,7 +112,8 @@ export default async function Overview() {
                   <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4 py-3">
                     <span><span className="font-semibold">{r.course?.name}</span><span className="text-muted">, {r.cohort?.name}</span></span>
                     <span className="flex flex-wrap gap-2 text-sm font-semibold">
-                      {r.submissions - r.graded > 0 && <Link href={href(r, "/submissions?graded=ungraded")} className="rounded-full bg-sky px-3 py-1 text-brand hover:bg-sky-deep">{r.submissions - r.graded} to mark</Link>}
+                      {r.submissions - r.graded - r.asked > 0 && <Link href={href(r, "/submissions?graded=ungraded")} className="rounded-full bg-sky px-3 py-1 text-brand hover:bg-sky-deep">{r.submissions - r.graded - r.asked} to mark</Link>}
+                      {r.asked > 0 && <Link href={href(r, "/resubmissions")} className="rounded-full bg-sky px-3 py-1 text-brand hover:bg-sky-deep">{r.asked} to resubmit</Link>}
                       {r.pending > 0 && <Link href={href(r, "/requests")} className="rounded-full bg-[#fbe9e6] px-3 py-1 text-fail hover:opacity-80">{r.pending} request{r.pending === 1 ? "" : "s"}</Link>}
                     </span>
                   </li>

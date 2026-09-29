@@ -45,6 +45,7 @@ Fidelia Joseph changed the design after the first draft. Where the sections belo
 24. Speed: who is signed in is read from the saved sign in, not asked from the login service on every click. Pages load in as few database trips as possible and show a loading screen at once. Check /api/health for the trip time and the server region.
 25. Phones: every page was checked at phone width for fit and by eye. Keep new pages phone friendly, and never put loose CSS outside a Tailwind layer, because it overrides the utility classes.
 26. Students page has select all, tick boxes and bulk delete, and a typed confirmation to empty the whole list.
+27. Resubmission. When marking, each link has a tick (good) and a switch called Resubmit (wrong). Any switch on turns the Comment box into a Feedback box, the score waits, and the button becomes Ask to resubmit. Comment and feedback are separate columns. The student sees the feedback, the other links locked, and a box only for the switched links, with the same two checks. The submission stays one row: old links go to submission_link_history, resubmitted_at is set, and the bell rings. States: To mark, Waiting for resubmission (resubmit_asked), Resubmitted ready to mark, Marked. There is a Resubmissions tab and an Overview number. Email this student is a mailto link with the message already written. SQL file 0006.
 
 ## The problem
 
