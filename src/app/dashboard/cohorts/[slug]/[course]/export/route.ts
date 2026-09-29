@@ -33,7 +33,35 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   let rows: (string | number)[][];
   let label: string;
 
-  if (sp.get("missing") === "1") {
+  if (sp.get("resubmissions") === "1") {
+    // Everyone a moderator held back, with the feedback given and whether it was emailed.
+    const { data: subs } = await supabase.from("submissions")
+      .select("id, resubmit_asked, resubmit_links, resubmit_feedback, resubmit_asked_at, resubmit_count, resubmitted_at, students!inner(full_name, email), tasks!inner(title, cohort_course_id)")
+      .eq("tasks.cohort_course_id", cc.id).or("resubmit_asked.eq.true,resubmitted_at.not.is.null").order("resubmit_asked_at", { ascending: false, nullsFirst: false });
+    const ids = (subs ?? []).map((r) => r.id);
+    const { data: mail } = ids.length
+      ? await supabase.from("submissions").select("id, resubmit_emailed_at, emailer:profiles!submissions_resubmit_emailed_by_fkey(full_name)").in("id", ids).not("resubmit_emailed_at", "is", null)
+      : { data: [] };
+    const sentBy = new Map((mail ?? []).map((m) => [m.id, m]));
+    const { data: custom } = await supabase.from("link_types").select("key, label, domains, hint");
+    const types = allTypes(custom ?? []);
+    const labelOf = (k: string) => types.find((t) => t.key === k)?.label ?? k;
+    header = ["Full name", "Email", "Cohort", "Course", "Task", "Status", "Links to fix", "Feedback", "Asked at", "Times asked", "Feedback emailed", "Emailed by", "Emailed at", "Resubmitted at"];
+    rows = (subs ?? []).map((r) => {
+      const st = first(r.students as One<{ full_name: string; email: string }>);
+      const tk = first(r.tasks as One<{ title: string }>);
+      const m = sentBy.get(r.id);
+      return [
+        st?.full_name ?? "", st?.email ?? "", cohort.name, course.name, tk?.title ?? "",
+        r.resubmit_asked ? "Waiting for resubmission" : "Resubmitted",
+        ((r.resubmit_links ?? []) as string[]).map(labelOf).join(", "), r.resubmit_feedback ?? "",
+        r.resubmit_asked_at ? showLagos(r.resubmit_asked_at) : "", r.resubmit_count ?? 0,
+        m ? "Yes" : "No", m ? first(m.emailer as One<{ full_name: string }>)?.full_name ?? "" : "", m ? showLagos(m.resubmit_emailed_at) : "",
+        r.resubmitted_at ? showLagos(r.resubmitted_at) : "",
+      ];
+    });
+    label = "resubmissions";
+  } else if (sp.get("missing") === "1") {
     // Students who have not sent one task.
     const { data: task } = await supabase.from("tasks").select("id, title").eq("cohort_course_id", cc.id).eq("slug", sp.get("task") ?? "").maybeSingle();
     if (!task) return new NextResponse("That task could not be found.", { status: 404 });
@@ -55,7 +83,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const labelOf = (k: string) => types.find((t) => t.key === k)?.label ?? k;
 
     const subs = taskIds.length ? await all((f, t) => supabase.from("submissions")
-      .select("id, task_id, links, unverified_links, reviewed, submitted_at, score, comment, graded_by, changed_after_grading, resubmit_asked, resubmitted_at, students(full_name, email)")
+      .select("id, task_id, links, unverified_links, reviewed, submitted_at, score, comment, graded_by, changed_after_grading, resubmit_asked, resubmitted_at, resubmit_feedback, students(full_name, email)")
       .in("task_id", taskIds).order("submitted_at").range(f, t)) : [];
     const reqs = taskIds.length ? await all((f, t) => supabase.from("requests").select("submission_id, kind, status").in("task_id", taskIds).range(f, t)) : [];
     const reqBy = new Map(reqs.map((r) => [r.submission_id, r]));
@@ -78,7 +106,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     header = ["Full name", "Email", "Cohort", "Task", "Type", "Submitted at",
       ...(has("links") ? keys.map(labelOf) : []),
       ...(has("score") ? ["Score", "Out of", "Comment"] : []),
-      ...(has("marking") ? ["All links reviewed", "Request used", "Graded by", "Changed after grading", "Resubmission"] : [])];
+      ...(has("marking") ? ["All links reviewed", "Request used", "Graded by", "Changed after grading", "Resubmission", "Resubmission feedback"] : [])];
     const taskBy = new Map((tasks ?? []).map((t) => [t.id, t]));
     rows = subs.map((s) => {
       const st = first(s.students as One<{ full_name: string; email: string }>);
@@ -96,6 +124,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           s.graded_by ? names.get(s.graded_by) ?? "" : "",
           s.changed_after_grading ? "Yes" : "No",
           s.resubmit_asked ? "Waiting for resubmission" : s.resubmitted_at ? "Resubmitted" : "",
+          s.resubmit_feedback ?? "",
         ] : []),
       ];
     });

@@ -13,16 +13,17 @@ const field = "rounded-xl border-[1.5px] border-line bg-white px-3 py-2 focus:bo
 // The marking area of one submission. Each link has a tick (it is good) and a switch (it is wrong, ask for a new one).
 // The moment any switch is on, the Comment box becomes a Feedback box for the student and the score waits.
 export function MarkingForm({
-  submissionId, returnTo, links, score, maxScore, comment, feedback, asked, resubmitted, markedInfo, mail, children,
+  submissionId, returnTo, links, score, maxScore, comment, feedback, asked, resubmitted, markedInfo, emailedInfo, mail, children,
 }: {
   submissionId: string; returnTo: string; links: MarkLink[]; score: number | null; maxScore: number;
-  comment: string; feedback: string; asked: boolean; resubmitted: boolean; markedInfo: string | null;
+  comment: string; feedback: string; asked: boolean; resubmitted: boolean; markedInfo: string | null; emailedInfo: string | null;
   mail: { to: string; firstName: string; taskTitle: string; taskLink: string };
   children?: React.ReactNode;
 }) {
   const [wrong, setWrong] = useState<Set<string>>(new Set(links.filter((l) => l.toggled).map((l) => l.key)));
   const [note, setNote] = useState(comment);
   const [fb, setFb] = useState(feedback);
+  const [sent, setSent] = useState(!!emailedInfo);
   const [mark, setMark] = useState(score === null ? "" : String(score));
   const [confirmed, setConfirmed] = useState<Record<string, boolean>>(Object.fromEntries(links.map((l) => [l.key, l.confirmed])));
   const asking = wrong.size > 0;
@@ -35,9 +36,7 @@ export function MarkingForm({
   const body = asking
     ? text([`Hello ${mail.firstName},`, "", `Thank you for sending your ${mail.taskTitle}.`, fb.trim(), "", `Please send a new link for: ${labels.join(", ")}.`, `Use this link: ${mail.taskLink}`, "", "Thank you."])
     : text([`Hello ${mail.firstName},`, "", score !== null && mark !== "" ? `Your ${mail.taskTitle} has been marked: ${mark} out of ${maxScore}.` : `I have looked at your ${mail.taskTitle}.`, note.trim(), "", "Thank you."]);
-  // The address stays readable (the @ must not be encoded, some mail apps refuse it). Only the subject and message are encoded.
-  const mailto = `mailto:${mail.to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  // Not everyone has a mail app set up on the device, so there is also a Gmail link that opens in the browser, and a copy button.
+  // Opens Gmail in the browser with the message written. The moderator can still edit it before sending. There is also a copy button.
   const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(mail.to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   const [copied, setCopied] = useState(false);
   async function copyMessage() {
@@ -105,6 +104,11 @@ export function MarkingForm({
               placeholder="Tell the student exactly what to fix." />
           </div>
           <input type="hidden" name="comment" value={note} />
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-line px-3 py-2.5 text-sm font-semibold has-[:checked]:border-brand has-[:checked]:bg-sky">
+            <input type="checkbox" name="emailed" checked={sent} onChange={(e) => setSent(e.target.checked)} className="h-5 w-5 flex-none accent-brand" />
+            <span>I have emailed this feedback to the student
+              {emailedInfo && sent && <span className="block text-xs font-normal text-muted">{emailedInfo}</span>}</span>
+          </label>
           <p className="text-sm text-muted">No score while the student is fixing the work.{score !== null && " The score already saved will be cleared."}</p>
         </div>
       ) : (
@@ -127,8 +131,7 @@ export function MarkingForm({
         ) : (
           <button formAction={saveGrade} className="rounded-xl bg-brand px-5 py-2.5 font-display font-semibold text-white hover:bg-brand-dark">Save score</button>
         )}
-        <a href={mailto} className="rounded-xl border-[1.5px] border-brand px-4 py-2 font-semibold text-brand hover:bg-sky">Email this student</a>
-        <a href={gmail} target="_blank" rel="noopener noreferrer" className="rounded-xl border-[1.5px] border-line px-4 py-2 font-semibold text-brand hover:bg-sky">Open in Gmail</a>
+        <a href={gmail} target="_blank" rel="noopener noreferrer" className="rounded-xl border-[1.5px] border-brand px-4 py-2 font-semibold text-brand hover:bg-sky">Open in Gmail</a>
         <button type="button" onClick={copyMessage} className="rounded-xl border-[1.5px] border-line px-4 py-2 font-semibold text-brand hover:bg-sky" aria-live="polite">{copied ? "Copied" : "Copy message"}</button>
         {asked && <button formAction={cancelResubmit} formNoValidate className="rounded-xl border-[1.5px] border-line px-4 py-2 font-semibold text-muted hover:bg-sky">Cancel resubmission</button>}
         {resubmitted && !asking && <span className="rounded-full bg-[#e1f2e9] px-3 py-1 text-sm font-semibold text-pass">Resubmitted, ready to mark</span>}

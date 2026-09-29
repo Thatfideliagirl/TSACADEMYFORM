@@ -60,6 +60,13 @@ export default async function SubmissionsPage({ params, searchParams }: { params
   for (const h of hist ?? []) { const k = `${h.submission_id}:${h.link_type}`; if (!beforeBy.has(k)) beforeBy.set(k, h.old_url); }
   const origin = await siteOrigin();
 
+  // Who ticked "I have emailed the student", and when. Kept separate so this page still works before SQL file 0007 is run.
+  const askedIds = (rows ?? []).filter((r) => r.resubmit_asked).map((r) => r.id);
+  const { data: mailed } = askedIds.length
+    ? await supabase.from("submissions").select("id, resubmit_emailed_at, emailer:profiles!submissions_resubmit_emailed_by_fkey(full_name)").in("id", askedIds).not("resubmit_emailed_at", "is", null)
+    : { data: [] };
+  const mailedBy = new Map((mailed ?? []).map((m) => [m.id, { at: m.resubmit_emailed_at as string, who: first(m.emailer as One<{ full_name: string }>)?.full_name ?? "a moderator" }]));
+
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const keep = (extra: Record<string, string>) => {
@@ -155,6 +162,9 @@ export default async function SubmissionsPage({ params, searchParams }: { params
                         ? <span className="rounded-full bg-[#fbe9e6] px-2.5 py-0.5 text-xs font-semibold text-fail">{stillOpen.length} link{stillOpen.length === 1 ? "" : "s"} not verified</span>
                         : <span className="rounded-full bg-[#e1f2e9] px-2.5 py-0.5 text-xs font-semibold text-pass">{unverified.length > 0 ? "Links checked" : "Links verified"}</span>}
                       {req?.status === "pending" && <span className="rounded-full bg-[#fbe9e6] px-2.5 py-0.5 text-xs font-semibold text-fail">Request waiting</span>}
+                      {r.resubmit_asked && (mailedBy.has(r.id)
+                        ? <span className="rounded-full bg-sky-deep px-2.5 py-0.5 text-xs font-semibold text-brand">Feedback sent</span>
+                        : <span className="rounded-full bg-sky-deep px-2.5 py-0.5 text-xs font-semibold text-muted">Feedback not sent yet</span>)}
                       {r.resubmit_asked
                         ? <span className="rounded-full bg-brand px-3 py-1 text-sm font-semibold text-white">Waiting for resubmission</span>
                         : <span className={`rounded-full px-3 py-1 text-sm font-semibold ${marked ? "bg-[#e1f2e9] text-pass" : "bg-sky-deep"}`}>{marked ? `${r.score} / ${tk?.max_score}` : r.resubmitted_at ? "Resubmitted, ready to mark" : "To mark"}</span>}
@@ -165,6 +175,7 @@ export default async function SubmissionsPage({ params, searchParams }: { params
                     submissionId={r.id} returnTo={returnTo} maxScore={tk?.max_score ?? 0} score={r.score}
                     comment={r.comment ?? ""} feedback={r.resubmit_feedback ?? ""} asked={!!r.resubmit_asked}
                     resubmitted={!!r.resubmitted_at && !r.resubmit_asked && (!r.graded_at || r.graded_at < r.resubmitted_at)}
+                    emailedInfo={mailedBy.has(r.id) ? `Emailed by ${mailedBy.get(r.id)!.who} on ${showLagos(mailedBy.get(r.id)!.at)}` : null}
                     markedInfo={marked && r.graded_at ? `Marked by ${who?.full_name ?? "a moderator"} on ${showLagos(r.graded_at)}` : null}
                     mail={{ to: st?.email ?? "", firstName: (st?.full_name ?? "").split(" ")[0], taskTitle: tk?.title ?? "", taskLink: `${origin}/submit/${cc.form_slug}/${tk?.slug}` }}
                     links={Object.entries(links).map(([key, url]) => ({
