@@ -34,6 +34,19 @@ export function AuthShell({ eyebrow, title, intro, children }: {
           <h2 className="fade-up mt-4 font-display text-2xl font-semibold text-navy" style={{ animationDelay: "520ms" }}>{title}</h2>
           <p className="fade-up mt-2 text-lg text-muted" style={{ animationDelay: "620ms" }}>{intro}</p>
           <div className="fade-up mt-8" style={{ animationDelay: "760ms" }}>{children}</div>
+
+          <div className="fade-up mt-12 rounded-2xl bg-navy p-6 text-white lg:hidden" style={{ animationDelay: "900ms" }}>
+            <p className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-sky-deep">Tech Sphere Academy</p>
+            <p className="mt-2 font-display text-2xl font-semibold leading-tight">Every submission, checked, kept and marked.</p>
+            <ul className="mt-5 flex flex-col gap-4">
+              {promises.map((p) => (
+                <li key={p.title} className="flex gap-3">
+                  <span aria-hidden className="mt-0.5 grid h-6 w-6 flex-none place-items-center rounded-full bg-white/15 text-xs font-semibold">✓</span>
+                  <div><p className="font-display font-semibold">{p.title}</p><p className="text-sm text-sky-deep">{p.text}</p></div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 

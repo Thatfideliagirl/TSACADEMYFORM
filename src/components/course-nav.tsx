@@ -9,11 +9,11 @@ const ITEMS = [
   ["tasks", "Tasks"],
 ] as const;
 
-// The row of pages inside one course. It scrolls sideways on a small phone.
+// The pages inside one course. On a small phone the buttons wrap onto two rows, so none are hidden.
 export function CourseNav({ base, active, pending = 0 }: { base: string; active: string; pending?: number }) {
   return (
-    <nav aria-label="Pages in this course" className="-mx-1 overflow-x-auto pb-1">
-      <ul className="flex min-w-max gap-1 px-1">
+    <nav aria-label="Pages in this course">
+      <ul className="flex flex-wrap gap-1">
         {ITEMS.map(([path, label]) => (
           <li key={path}>
             <Link href={path ? `${base}/${path}` : base} aria-current={active === path ? "page" : undefined}

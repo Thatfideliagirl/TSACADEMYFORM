@@ -85,26 +85,24 @@ export default async function StudentsPage({ params, searchParams }: {
           <BulkSelect formId="bulk-delete" total={students.length} />
           <ul className="flex flex-col gap-2">
             {students.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-end gap-2 rounded-xl border border-line bg-white p-3">
-                <label className="flex h-10 items-center pr-1">
+              <li key={s.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 rounded-xl border border-line bg-white p-3">
+                <label className="flex h-11 items-center">
                   <input type="checkbox" name="ids" value={s.id} form="bulk-delete" aria-label={`Select ${s.full_name}`} className="h-5 w-5 accent-brand" />
                 </label>
-                <form action={updateStudent} className="flex min-w-0 flex-1 flex-wrap items-end gap-2">
-                  {hiddenFields}<input type="hidden" name="id" value={s.id} />
-                  <div className="flex min-w-40 flex-1 flex-col gap-1">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                  <form action={updateStudent} className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                    {hiddenFields}<input type="hidden" name="id" value={s.id} />
                     <label htmlFor={`n-${s.id}`} className="sr-only">Full name</label>
-                    <input id={`n-${s.id}`} name="full_name" defaultValue={s.full_name} required className={input} />
-                  </div>
-                  <div className="flex min-w-40 flex-1 flex-col gap-1">
+                    <input id={`n-${s.id}`} name="full_name" defaultValue={s.full_name} required className={`${input} sm:flex-1`} />
                     <label htmlFor={`e-${s.id}`} className="sr-only">Email</label>
-                    <input id={`e-${s.id}`} name="email" type="email" defaultValue={s.email} required className={input} />
-                  </div>
-                  <button className="rounded-lg border-[1.5px] border-line px-3 py-2 text-sm font-semibold text-brand hover:bg-sky">Save</button>
-                </form>
-                <form action={deleteStudent}>
-                  {hiddenFields}<input type="hidden" name="id" value={s.id} />
-                  <button className="rounded-lg border-[1.5px] border-[#e8b9b2] px-3 py-2 text-sm font-semibold text-fail hover:bg-[#fbe9e6]">Remove</button>
-                </form>
+                    <input id={`e-${s.id}`} name="email" type="email" defaultValue={s.email} required className={`${input} sm:flex-1`} />
+                    <button className="self-start rounded-lg border-[1.5px] border-line px-4 py-2 text-sm font-semibold text-brand hover:bg-sky sm:self-auto">Save</button>
+                  </form>
+                  <form action={deleteStudent} className="self-start sm:self-auto">
+                    {hiddenFields}<input type="hidden" name="id" value={s.id} />
+                    <button className="rounded-lg border-[1.5px] border-[#e8b9b2] px-4 py-2 text-sm font-semibold text-fail hover:bg-[#fbe9e6]">Remove</button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>

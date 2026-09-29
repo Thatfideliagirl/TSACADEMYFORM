@@ -126,7 +126,7 @@ export default async function CoursePage({ params, searchParams }: {
           <div className="flex flex-col gap-2">
             <span className="text-sm font-semibold">Form link</span>
             <div className="flex items-center gap-2 rounded-xl bg-sky px-3 py-2.5">
-              <code className="min-w-0 flex-1 truncate text-sm">{link}</code>
+              <code className="min-w-0 flex-1 break-all text-sm">{link}</code>
               <CopyButton text={link} />
             </div>
             <p className="text-sm text-muted">Share this link with the students of this course.</p>
@@ -136,9 +136,9 @@ export default async function CoursePage({ params, searchParams }: {
                 <input type="hidden" name="cohort_slug" value={cohort.slug} />
                 <input type="hidden" name="course_slug" value={course.slug} />
                 <label htmlFor="address" className="text-sm font-semibold">Change the end of the link</label>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-muted">/submit/</span>
-                  <input id="address" name="address" defaultValue={cc.form_slug} required className={`${box} min-w-0 flex-1`} />
+                  <input id="address" name="address" defaultValue={cc.form_slug} required className={`${box} min-w-[10rem] flex-1`} />
                   <button className="rounded-lg border-[1.5px] border-line px-3 py-2 text-sm font-semibold text-brand hover:bg-sky">Change</button>
                 </div>
                 <p className="text-xs text-muted">Letters, numbers and dashes only. If you change it, links you already shared stop working, so send the new one.</p>

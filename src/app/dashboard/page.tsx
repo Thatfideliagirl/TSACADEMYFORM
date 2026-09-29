@@ -77,7 +77,7 @@ export default async function Overview() {
         </p>
       )}
 
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
         {tiles.map(([label, n, tone, note]) => (
           <div key={label} className="rounded-2xl border border-line bg-white p-4">
             <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
@@ -89,9 +89,9 @@ export default async function Overview() {
 
       {isAdmin && (
         <div className="flex flex-wrap gap-3">
-          <Link href="/dashboard/cohorts" className="rounded-xl bg-brand px-5 py-2.5 font-display font-semibold text-white hover:bg-brand-dark">Create or open a cohort</Link>
-          <Link href="/dashboard/people" className="rounded-xl border-[1.5px] border-line bg-white px-5 py-2.5 font-semibold text-brand hover:bg-sky">Invite a moderator</Link>
-          <Link href="/dashboard/courses" className="rounded-xl border-[1.5px] border-line bg-white px-5 py-2.5 font-semibold text-brand hover:bg-sky">Manage courses</Link>
+          <Link href="/dashboard/cohorts" className="w-full rounded-xl bg-brand px-5 py-2.5 text-center font-display font-semibold text-white hover:bg-brand-dark sm:w-auto">Create or open a cohort</Link>
+          <Link href="/dashboard/people" className="w-full rounded-xl border-[1.5px] border-line bg-white px-5 py-2.5 text-center font-semibold text-brand hover:bg-sky sm:w-auto">Invite a moderator</Link>
+          <Link href="/dashboard/courses" className="w-full rounded-xl border-[1.5px] border-line bg-white px-5 py-2.5 text-center font-semibold text-brand hover:bg-sky sm:w-auto">Manage courses</Link>
         </div>
       )}
 

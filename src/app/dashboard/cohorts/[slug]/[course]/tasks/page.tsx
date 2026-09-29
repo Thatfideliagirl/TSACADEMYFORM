@@ -72,7 +72,7 @@ export default async function TasksPage({ params, searchParams }: {
                   {(t.required_links as string[]).map((k) => <span key={k} className="rounded-full bg-sky px-2.5 py-0.5 text-xs font-semibold text-brand">{labelOf(k)}</span>)}
                 </div>
                 <div className="mt-4 flex items-center gap-2 rounded-xl bg-sky px-3 py-2">
-                  <code className="min-w-0 flex-1 truncate text-sm">{link}</code>
+                  <code className="min-w-0 flex-1 break-all text-sm">{link}</code>
                   <CopyButton text={link} label="Copy link" />
                 </div>
               </li>

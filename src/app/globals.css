@@ -82,3 +82,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .word, .fade-up, .slide-in, .pop, .drift, .glow { animation: none; }
 }
+
+/* Boxes in a grid may shrink below the width of their longest word or link, so nothing pushes a phone screen sideways. */
+@layer base {
+  main :where(.grid, .flex) > * { min-width: 0; }
+}
