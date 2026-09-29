@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { importStudents, type ImportResult } from "@/app/actions/students";
-import { checkRows, detectColumns, PROBLEM_TEXT } from "@/lib/roster";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { findBadDomains, importStudents, type ImportResult } from "@/app/actions/students";
+import { checkRows, detectColumns, domainOf, EMAIL_RE, normaliseEmail, PROBLEM_TEXT } from "@/lib/roster";
 
 type Sheet = { headers: string[]; rows: string[][] };
 
@@ -30,10 +30,25 @@ export function RosterUploader({ cohortCourseId, existingEmails }: { cohortCours
     }
   }
 
+  // Which email websites do not exist. Asked from the server, because a browser cannot look these up.
+  const [badDomains, setBadDomains] = useState<Set<string>>(new Set());
+  const [looking, setLooking] = useState(false);
+  useEffect(() => {
+    if (!sheet || cols.email < 0) return;
+    const domains = [...new Set(sheet.rows.map((r) => normaliseEmail(r[cols.email] ?? "")).filter((e) => EMAIL_RE.test(e)).map(domainOf))];
+    let stale = false;
+    const t = setTimeout(async () => {
+      setLooking(true);
+      try { const bad = await findBadDomains(domains); if (!stale) setBadDomains(new Set(bad)); } catch { if (!stale) setBadDomains(new Set()); }
+      if (!stale) setLooking(false);
+    }, 0);
+    return () => { stale = true; clearTimeout(t); };
+  }, [sheet, cols.email]);
+
   const checked = useMemo(() => {
     if (!sheet || cols.name < 0 || cols.email < 0) return [];
-    return checkRows(sheet.rows.map((r) => ({ name: r[cols.name], email: r[cols.email] })), existingEmails);
-  }, [sheet, cols, existingEmails]);
+    return checkRows(sheet.rows.map((r) => ({ name: r[cols.name], email: r[cols.email] })), existingEmails, badDomains);
+  }, [sheet, cols, existingEmails, badDomains]);
 
   const good = checked.filter((r) => r.problem === "ok").length;
   const label = (h: string, i: number) => h.trim() || `Column ${i + 1}`;
@@ -82,6 +97,7 @@ export function RosterUploader({ cohortCourseId, existingEmails }: { cohortCours
                 <span className="font-semibold text-pass">{good} ready to import</span>
                 {checked.length - good > 0 && <>, <span className="font-semibold text-fail">{checked.length - good} with a problem</span> (these will be skipped)</>}
               </p>
+              {looking && <p className="text-sm text-muted" aria-live="polite">Checking that each email website exists...</p>}
               <div className="max-h-96 overflow-auto rounded-xl border border-line">
                 <table className="w-full min-w-[32rem] text-left text-sm">
                   <thead className="sticky top-0 bg-sky text-xs uppercase tracking-wide text-muted">
@@ -92,7 +108,7 @@ export function RosterUploader({ cohortCourseId, existingEmails }: { cohortCours
                       <tr key={i} className={r.problem === "ok" ? "" : "bg-[#fbe9e6]"}>
                         <td className="border-t border-line px-3 py-2">{r.name || "-"}</td>
                         <td className="border-t border-line px-3 py-2">{r.email || "-"}</td>
-                        <td className={`border-t border-line px-3 py-2 font-medium ${r.problem === "ok" ? "text-pass" : "text-fail"}`}>{r.problem === "ok" ? "Ready" : PROBLEM_TEXT[r.problem]}</td>
+                        <td className={`border-t border-line px-3 py-2 font-medium ${r.problem === "ok" ? "text-pass" : "text-fail"}`}>{r.problem === "ok" ? "Ready" : `${PROBLEM_TEXT[r.problem]}${r.hint ? `. ${r.hint}` : ""}`}</td>
                       </tr>
                     ))}
                   </tbody>
