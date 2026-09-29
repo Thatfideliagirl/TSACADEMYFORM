@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { saveTask } from "@/app/actions/tasks";
-import { LINK_TYPES, LINK_TYPE_KEYS } from "@/lib/link-types";
+import type { LinkDef } from "@/lib/link-types";
 import { toLagosInput } from "@/lib/lagos";
 
 export type TaskValues = {
@@ -10,8 +10,8 @@ export type TaskValues = {
 
 const field = "rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 focus:border-brand focus:outline-none";
 
-export function TaskForm({ ctx, task, hasSubmissions }: {
-  ctx: { cohortCourseId: string; cohortSlug: string; courseSlug: string }; task?: TaskValues; hasSubmissions?: boolean;
+export function TaskForm({ ctx, task, hasSubmissions, types }: {
+  ctx: { cohortCourseId: string; cohortSlug: string; courseSlug: string }; task?: TaskValues; hasSubmissions?: boolean; types: LinkDef[];
 }) {
   const v: TaskValues = task ?? { kind: "assignment", title: "", instructions: "", max_score: 100, required_links: [], is_open: true, opens_at: null, closes_at: null };
   return (
@@ -49,13 +49,13 @@ export function TaskForm({ ctx, task, hasSubmissions }: {
       <fieldset className="flex flex-col gap-2">
         <legend className="font-semibold">Links students must send</legend>
         <p className="text-sm text-muted">
-          {hasSubmissions ? "Students have already submitted, so these cannot be changed any more." : "Tick every kind of link this task needs. Each one gets its own box on the form."}
+          {hasSubmissions ? "Students have already submitted, so these cannot be changed any more." : "Tick every kind of link this task needs. Each one gets its own box on the form. Need a different kind? Add it on the Tasks page first."}
         </p>
         <div className="mt-1 grid gap-2 sm:grid-cols-2">
-          {LINK_TYPE_KEYS.map((k) => (
+          {types.map(({ key: k, label }) => (
             <label key={k} className={`flex items-center gap-3 rounded-xl border-[1.5px] border-line bg-white px-4 py-3 font-medium has-[:checked]:border-brand has-[:checked]:bg-sky ${hasSubmissions ? "opacity-70" : "cursor-pointer"}`}>
               <input type="checkbox" name="link" value={k} defaultChecked={v.required_links.includes(k)} disabled={hasSubmissions} className="h-5 w-5 accent-brand" />
-              {LINK_TYPES[k].label}
+              {label}
             </label>
           ))}
         </div>
