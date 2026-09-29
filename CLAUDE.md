@@ -4,7 +4,7 @@ Read this whole file before doing anything. It is the single source of truth for
 
 ## Who you are working with
 
-The owner is Coco, a moderator at TS Academy (Tech Sphere Academy, tsacademyonline.com). He is not a developer. He will not write code. He uses Claude Code on the web.
+The owner is Fidelia Joseph, a moderator at TS Academy (Tech Sphere Academy, tsacademyonline.com). He is not a developer. He will not write code. He uses Claude Code on the web.
 
 How to work with him:
 1. Explain everything in simple, plain language, step by step. If you must use a technical word, explain it in one short sentence.
@@ -17,7 +17,7 @@ A working visual prototype of version one is in `reference/submission-desk.html`
 
 ## Version 2 decisions (these override anything below that disagrees)
 
-Coco changed the design after the first draft. Where the sections below say something different, follow this section. The rest of the file gets cleaned up at Stage 10.
+Fidelia Joseph changed the design after the first draft. Where the sections below say something different, follow this section. The rest of the file gets cleaned up at Stage 10.
 
 1. Name. The app is called TS Academy Submit.
 2. Structure. Cohort comes first. Admin creates a cohort, then adds courses inside it (about seven, sometimes more). Each course inside a cohort ("cohort course") has its own student list, its own tasks and its own form links. Courses are kept apart, so one course never sees another course's data.
@@ -29,7 +29,7 @@ Coco changed the design after the first draft. Where the sections below say some
 8. Moderators are assigned per cohort course. When a new cohort starts the admin assigns moderators again. A moderator's dashboard lists every cohort they belong to.
 9. Table changes. courses becomes a plain list of course names. cohorts is top level (name, slug, is_open). New table cohort_courses (id, cohort_id, course_id, form_name, form_slug, is_open). students, tasks and course_moderators point to cohort_courses instead of cohorts and courses. New table invites (email, role, code_hash, used_at, created_by). Tasks also get a slug for the direct link.
 10. Brand. Colours: logo blue #1A5BB8, deep navy #0F2544, sky tint #EEF4FC, white. Green #1C7C4F and red #B23A2C only for link check results. Fonts: Outfit for headings, Albert Sans for body and forms. The logo is in reference/brand/ts-academy-logo.jpg. Do not use yellow.
-11. The visual plan is at https://claude.ai/artifact/JQXHhpKYBy6ETe8HXSvdJ5 (Coco's private artifact).
+11. The visual plan is at https://claude.ai/artifact/JQXHhpKYBy6ETe8HXSvdJ5 (Fidelia Joseph's private artifact).
 12. Link types. Staff can add their own kinds of link (name plus website) from the Tasks page, stored in the link_types table. Built in kinds live in src/lib/link-types.ts. Every kind is checked by address pattern or by the website it must come from.
 13. Student form addresses: /submit/<form_slug> (course form, student picks a task after verifying) and /submit/<form_slug>/<task_slug> (direct link to one task). Students verify with name and email on the server, get a signed pass valid for 2 hours, and every later step needs it.
 14. Link open check (src/lib/link-open.ts). Says "locked" only on a clear sign (Google sign in redirect, Trello or Notion says not public, 401 or 404). If it cannot tell, the student passes and the link is flagged "Could not verify" for the moderator. Never lock out a real student because a site blocks robots.
@@ -62,7 +62,7 @@ A clean submission system that does the boring gatekeeping automatically, so mod
 ## Tech stack
 
 1. Next.js (App Router) with TypeScript and Tailwind CSS.
-2. Supabase for the database, login (Auth), security rules (Row Level Security), and server functions (Edge Functions). Coco's preferred backend is Supabase.
+2. Supabase for the database, login (Auth), security rules (Row Level Security), and server functions (Edge Functions). Fidelia Joseph's preferred backend is Supabase.
 3. Deploy on Vercel.
 4. Spreadsheet reading and writing: SheetJS (xlsx) for .xlsx and .csv files.
 
@@ -96,7 +96,7 @@ Student
 1. No account and no login.
 2. Uses the public form link only.
 
-Keep role permissions in one place in the code so Coco can easily change who is allowed to do what later.
+Keep role permissions in one place in the code so Fidelia Joseph can easily change who is allowed to do what later.
 
 ## Link types
 
@@ -170,7 +170,7 @@ A server function that tries to open each link like a stranger would (no login, 
 
 Important: if the check cannot decide (the site is slow, blocked, or changed), do NOT block the student. Let them submit, and mark that link "Could not verify" so moderators can see it. Never lock out a real student because of a technical hiccup.
 
-Test each type with real public and private links and tell Coco the results in plain words.
+Test each type with real public and private links and tell Fidelia Joseph the results in plain words.
 
 ## Roster upload
 
@@ -216,7 +216,7 @@ Export:
 
 ## Suggested database tables
 
-Adjust if you find a better design, but explain any change to Coco in plain words.
+Adjust if you find a better design, but explain any change to Fidelia Joseph in plain words.
 
 1. profiles: id (same as login user id), full_name, email, role (admin or moderator)
 2. courses: id, name, slug, created_at
@@ -230,7 +230,7 @@ Adjust if you find a better design, but explain any change to Coco in plain word
 
 ## Design
 
-1. Use TS Academy's brand. Check tsacademyonline.com for the logo and brand colours (look at the site's styles). If you cannot get them reliably, ask Coco to upload the logo and tell you the colour codes.
+1. Use TS Academy's brand. Check tsacademyonline.com for the logo and brand colours (look at the site's styles). If you cannot get them reliably, ask Fidelia Joseph to upload the logo and tell you the colour codes.
 2. Students mostly use phones: the form must be clean and easy on a small screen.
 3. Dashboards must work well on a laptop and still be usable on a phone.
 4. Keep the stamp style ticks from the prototype for the live link checks.
@@ -240,7 +240,7 @@ Adjust if you find a better design, but explain any change to Coco in plain word
 
 Do these in order. One stage at a time. Test and explain at the end of each.
 
-Stage 0. Set up the project, connect Supabase, and prepare Vercel. Walk Coco through creating the Supabase project and adding the environment variables, with exact clicks.
+Stage 0. Set up the project, connect Supabase, and prepare Vercel. Walk Fidelia Joseph through creating the Supabase project and adding the environment variables, with exact clicks.
 Stage 1. Database tables, security rules, and a small set of demo data.
 Stage 2. Admin login, create courses and cohorts, invite moderators, assign them to courses.
 Stage 3. Roster upload with preview and problem checks, plus the empty template.
@@ -250,7 +250,7 @@ Stage 6. Server link open check, including the "Could not verify" fallback.
 Stage 7. Moderator dashboard: overview, submissions with dropdown grading, filters, search, not submitted page.
 Stage 8. Resubmit and note requests, for both students and moderators.
 Stage 9. Exports (xlsx and CSV).
-Stage 10. Brand polish, full test with a pretend cohort, and a one page plain language guide for admins and moderators, so Coco can pitch it to TS Academy.
+Stage 10. Brand polish, full test with a pretend cohort, and a one page plain language guide for admins and moderators, so Fidelia Joseph can pitch it to TS Academy.
 
 ## Ideas for later (do not build now)
 
