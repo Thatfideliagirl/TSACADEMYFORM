@@ -30,6 +30,10 @@ Coco changed the design after the first draft. Where the sections below say some
 9. Table changes. courses becomes a plain list of course names. cohorts is top level (name, slug, is_open). New table cohort_courses (id, cohort_id, course_id, form_name, form_slug, is_open). students, tasks and course_moderators point to cohort_courses instead of cohorts and courses. New table invites (email, role, code_hash, used_at, created_by). Tasks also get a slug for the direct link.
 10. Brand. Colours: logo blue #1A5BB8, deep navy #0F2544, sky tint #EEF4FC, white. Green #1C7C4F and red #B23A2C only for link check results. Fonts: Outfit for headings, Albert Sans for body and forms. The logo is in reference/brand/ts-academy-logo.jpg. Do not use yellow.
 11. The visual plan is at https://claude.ai/artifact/JQXHhpKYBy6ETe8HXSvdJ5 (Coco's private artifact).
+12. Link types. Staff can add their own kinds of link (name plus website) from the Tasks page, stored in the link_types table. Built in kinds live in src/lib/link-types.ts. Every kind is checked by address pattern or by the website it must come from.
+13. Student form addresses: /submit/<form_slug> (course form, student picks a task after verifying) and /submit/<form_slug>/<task_slug> (direct link to one task). Students verify with name and email on the server, get a signed pass valid for 2 hours, and every later step needs it.
+14. Link open check (src/lib/link-open.ts). Says "locked" only on a clear sign (Google sign in redirect, Trello or Notion says not public, 401 or 404). If it cannot tell, the student passes and the link is flagged "Could not verify" for the moderator. Never lock out a real student because a site blocks robots.
+15. Every inner page has a clear "Back to ..." button (src/components/back-link.tsx).
 
 ## The problem
 
