@@ -19,28 +19,31 @@ export async function GET() {
   const seen = me.notifications_seen_at as string;
   const now = new Date().toISOString();
 
-  const [{ count }, { data: latest }] = await Promise.all([
-    supabase.from("submissions").select("id", { count: "exact", head: true }).gt("submitted_at", seen).lte("submitted_at", now),
-    supabase.from("submissions")
-      .select("id, submitted_at, students(full_name), tasks(title, cohort_courses(cohorts(slug, name), courses(slug, name)))")
-      .order("submitted_at", { ascending: false }).limit(8),
+  // New work is either a first submission or a resubmission that came back.
+  const cols = "id, submitted_at, resubmitted_at, students(full_name), tasks(title, cohort_courses(cohorts(slug, name), courses(slug, name)))";
+  const [{ count }, { data: fresh }, { data: again }] = await Promise.all([
+    supabase.from("submissions").select("id", { count: "exact", head: true }).or(`and(submitted_at.gt.${seen},submitted_at.lte.${now}),and(resubmitted_at.gt.${seen},resubmitted_at.lte.${now})`),
+    supabase.from("submissions").select(cols).order("submitted_at", { ascending: false }).limit(8),
+    supabase.from("submissions").select(cols).not("resubmitted_at", "is", null).order("resubmitted_at", { ascending: false }).limit(8),
   ]);
 
-  const items = (latest ?? []).map((s) => {
+  const seenIds = new Set<string>();
+  const items = [...(fresh ?? []), ...(again ?? [])].map((s) => {
     const task = first(s.tasks as One<{ title: string; cohort_courses: One<{ cohorts: One<{ slug: string; name: string }>; courses: One<{ slug: string; name: string }> }> }>);
     const cc = first(task?.cohort_courses ?? null);
     const cohort = first(cc?.cohorts ?? null);
     const course = first(cc?.courses ?? null);
+    const back = !!s.resubmitted_at;
+    const at = back && s.resubmitted_at > s.submitted_at ? s.resubmitted_at : s.submitted_at;
     return {
-      id: s.id,
+      id: s.id, resubmitted: back && at === s.resubmitted_at,
       student: first(s.students as One<{ full_name: string }>)?.full_name ?? "A student",
       task: task?.title ?? "a task",
       where: [course?.name, cohort?.name].filter(Boolean).join(", "),
       href: cohort && course ? `/dashboard/cohorts/${cohort.slug}/${course.slug}/submissions` : "/dashboard",
-      at: s.submitted_at,
-      isNew: s.submitted_at > seen,
+      at, isNew: at > seen,
     };
-  });
+  }).sort((x, y) => y.at.localeCompare(x.at)).filter((i) => (seenIds.has(i.id) ? false : (seenIds.add(i.id), true))).slice(0, 8);
   return NextResponse.json({ enabled: true, count: count ?? 0, items, now });
 }
 

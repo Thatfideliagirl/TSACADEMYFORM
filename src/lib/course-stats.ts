@@ -14,7 +14,7 @@ export async function courseStats(supabase: SupabaseClient, cohortCourseId: stri
   const ids = tasks.map((t) => t.id);
   const allIds = (all ?? []).map((t) => t.id);
 
-  const [progress, sentBy, pending] = await Promise.all([
+  const [progress, sentBy, pending, asked] = await Promise.all([
     Promise.all(tasks.map(async (t): Promise<TaskProgress> => {
       const [{ count: submitted }, { count: graded }] = await Promise.all([
         supabase.from("submissions").select("id", { count: "exact", head: true }).eq("task_id", t.id),
@@ -36,6 +36,9 @@ export async function courseStats(supabase: SupabaseClient, cohortCourseId: stri
     allIds.length
       ? supabase.from("requests").select("id", { count: "exact", head: true }).in("task_id", allIds).eq("status", "pending")
       : Promise.resolve({ count: 0 }),
+    ids.length
+      ? supabase.from("submissions").select("id", { count: "exact", head: true }).in("task_id", ids).eq("resubmit_asked", true)
+      : Promise.resolve({ count: 0 }),
   ]);
 
   const submissions = progress.reduce((n, t) => n + t.submitted, 0);
@@ -50,7 +53,8 @@ export async function courseStats(supabase: SupabaseClient, cohortCourseId: stri
     studentsSent: sentBy.size,
     studentsNothing: Math.max(total - sentBy.size, 0),
     graded,
-    waiting: submissions - graded,
+    waiting: submissions - graded - (asked.count ?? 0),
+    waitingResubmit: asked.count ?? 0,
     pendingRequests: pending.count ?? 0,
     progress,
   };

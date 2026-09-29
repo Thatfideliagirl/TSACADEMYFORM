@@ -18,6 +18,8 @@ export type TaskInfo = {
   sent: { key: string; label: string; url: string }[];
   // The one request they may use per task, once made.
   request: { kind: "replace_link" | "note"; status: "pending" | "approved" | "declined" } | null;
+  // Set when a moderator held the work back: what to fix, and which links the student may send again.
+  resubmit: { feedback: string; links: string[] } | null;
 };
 export type VerifyResult =
   | { ok: false; error: string }
@@ -54,7 +56,13 @@ export async function verifyStudent(input: { formSlug: string; name: string; ema
 
   const { data: tasks } = await db.from("tasks").select(TASK_COLUMNS).eq("cohort_course_id", form.id).order("created_at");
   const open = ((tasks ?? []) as TaskRow[]).filter((t) => taskIsOpen(t));
-  const { data: subs } = await db.from("submissions").select("task_id, submitted_at, links").eq("student_id", student.id);
+  type SubRow = { task_id: string; submitted_at: string; links: unknown; resubmit_asked?: boolean; resubmit_links?: string[]; resubmit_feedback?: string };
+  let subs: SubRow[] | null = null;
+  {
+    const full = await db.from("submissions").select("task_id, submitted_at, links, resubmit_asked, resubmit_links, resubmit_feedback").eq("student_id", student.id);
+    if (!full.error) subs = full.data as SubRow[];
+    else subs = (await db.from("submissions").select("task_id, submitted_at, links").eq("student_id", student.id)).data as SubRow[] | null;
+  }
   const done = new Map((subs ?? []).map((s) => [s.task_id, s]));
   const { data: reqs } = await db.from("requests").select("task_id, kind, status").eq("student_id", student.id);
   const reqBy = new Map((reqs ?? []).map((r) => [r.task_id, r]));
@@ -70,6 +78,7 @@ export async function verifyStudent(input: { formSlug: string; name: string; ema
       required: t.required_links, custom, submittedAt: (mine?.submitted_at as string | undefined) ?? null,
       sent: mine ? defs.filter((d) => links[d.key]).map((d) => ({ key: d.key, label: d.label, url: links[d.key] })) : [],
       request: req ? { kind: req.kind as "replace_link" | "note", status: req.status as "pending" | "approved" | "declined" } : null,
+      resubmit: mine?.resubmit_asked ? { feedback: mine.resubmit_feedback ?? "", links: mine.resubmit_links ?? [] } : null,
     });
   }
   return { ok: true, token: issuePass(student.id, form.id), studentName: student.full_name, tasks: list };
@@ -157,6 +166,57 @@ export async function submitWork(input: { token: string; taskSlug: string; links
     ok: true, submittedAt: saved.submitted_at,
     received: defs.map((d) => ({ label: d.label, url: links[d.key], verified: !unverified.includes(d.key) })),
   };
+}
+
+export type ResubmitResult = { ok: false; error: string } | { ok: true; received: { label: string; url: string; verified: boolean }[] };
+
+// A student a moderator asked to resubmit sends new links, only for the links the moderator switched on.
+// The other links cannot be touched. The old links go into the history, and the moderator is told through the bell.
+export async function submitResubmission(input: { token: string; taskSlug: string; links: Record<string, string> }): Promise<ResubmitResult> {
+  const t = await loadTask(input.token, input.taskSlug);
+  if (t.error !== undefined) return { ok: false, error: t.error };
+  const { pass, db, task, defs, custom } = t;
+
+  const { data: sub } = await db.from("submissions")
+    .select("id, links, unverified_links, reviewed, resubmit_asked, resubmit_links").eq("task_id", task.id).eq("student_id", pass.sid).maybeSingle();
+  if (!sub) return { ok: false, error: "You have not submitted this task yet." };
+  if (!sub.resubmit_asked) return { ok: false, error: "Your moderator has not asked you to resubmit this task." };
+
+  const old = sub.links as Record<string, string>;
+  const open = (sub.resubmit_links as string[]).filter((k) => defs.some((d) => d.key === k));
+  if (!open.length) return { ok: false, error: "There is no link to send again for this task." };
+
+  const all = allTypes(custom);
+  const fresh: Record<string, string> = {};
+  const seen = new Set(Object.entries(old).filter(([k]) => !open.includes(k)).map(([, u]) => norm(u)));
+  for (const key of open) {
+    const def = defs.find((d) => d.key === key)!;
+    const url = cleanUrl(String(input.links?.[key] ?? ""));
+    if (!url) return { ok: false, error: `Paste your new ${def.label} link.` };
+    const type = checkLinkType(def, url, all);
+    if (!type.ok) return { ok: false, error: `${def.label}: ${type.message}` };
+    if (norm(url) === norm(String(old[key] ?? ""))) return { ok: false, error: `${def.label}: this is the same link you sent before. Send the new one.` };
+    if (seen.has(norm(url))) return { ok: false, error: "You pasted the same link in two boxes." };
+    seen.add(norm(url));
+    fresh[key] = url;
+  }
+
+  const results = await Promise.all(open.map(async (k) => [k, await checkOpen(defs.find((d) => d.key === k)!, fresh[k])] as const));
+  const locked = results.find(([, s]) => s === "locked");
+  if (locked) return { ok: false, error: `${defs.find((d) => d.key === locked[0])!.label}: this link is locked. Set sharing to Anyone with the link, then paste it again.` };
+  const unknown = results.filter(([, s]) => s === "unknown").map(([k]) => k);
+
+  const reviewed = { ...((sub.reviewed ?? {}) as Record<string, boolean>) };
+  for (const k of open) { reviewed[k] = false; reviewed[`opens:${k}`] = false; }
+  const stillUnverified = ((sub.unverified_links ?? []) as string[]).filter((k) => !open.includes(k));
+
+  await db.from("submission_link_history").insert(open.map((k) => ({ submission_id: sub.id, link_type: k, old_url: old[k] ?? "", new_url: fresh[k] })));
+  const { error } = await db.from("submissions").update({
+    links: { ...old, ...fresh }, unverified_links: [...stillUnverified, ...unknown], reviewed,
+    resubmit_asked: false, resubmit_links: [], resubmitted_at: new Date().toISOString(),
+  }).eq("id", sub.id).eq("resubmit_asked", true);
+  if (error) return { ok: false, error: "Something went wrong saving your new links. Please try again." };
+  return { ok: true, received: open.map((k) => ({ label: defs.find((d) => d.key === k)!.label, url: fresh[k], verified: !unknown.includes(k) })) };
 }
 
 export type RequestResult = { ok: true } | { ok: false; error: string };

@@ -43,8 +43,53 @@ export async function saveGrade(formData: FormData) {
     graded_by: score === null ? null : profile.id,
     graded_at: score === null ? null : new Date().toISOString(),
     changed_after_grading: false,
+    // Saving a mark ends any resubmission that was being asked for.
+    resubmit_asked: false, resubmit_links: [],
   }).eq("id", sub!.id);
   if (error) back(to, "error", "Could not save. Please try again.");
   revalidatePath("/dashboard", "layout");
   back(to, "ok", score === null ? "Saved. No score yet." : `Saved. Score ${score} out of ${max}.`);
+}
+
+// Holds a submission back and asks the student to send new links for the ones that were wrong.
+// The links the moderator did not switch on stay exactly as they are, and the student cannot change them.
+export async function askResubmit(formData: FormData) {
+  const { supabase, profile } = await requireStaff();
+  const to = str(formData, "return_to");
+  const { data: sub } = await supabase.from("submissions")
+    .select("id, links, resubmit_asked, resubmit_count, reviewed").eq("id", str(formData, "submission_id")).maybeSingle();
+  if (!sub) back(to, "error", "That submission could not be found.");
+
+  const links = sub!.links as Record<string, string>;
+  const wrong = Object.keys(links).filter((k) => formData.get(`resubmit_${k}`) === "on");
+  const feedback = str(formData, "feedback");
+  if (!wrong.length) back(to, "error", "Switch on Resubmit for at least one link.");
+  if (!feedback) back(to, "error", "Write your feedback, so the student knows what to fix.");
+
+  const reviewed: Record<string, boolean> = { ...((sub!.reviewed ?? {}) as Record<string, boolean>) };
+  for (const key of Object.keys(links)) {
+    reviewed[key] = wrong.includes(key) ? false : formData.get(`reviewed_${key}`) === "on";
+    if (wrong.includes(key)) reviewed[`opens:${key}`] = false;
+  }
+
+  const { error } = await supabase.from("submissions").update({
+    reviewed, comment: str(formData, "comment"),
+    resubmit_asked: true, resubmit_links: wrong, resubmit_feedback: feedback,
+    resubmit_asked_at: new Date().toISOString(), resubmit_asked_by: profile.id,
+    resubmit_count: sub!.resubmit_asked ? sub!.resubmit_count : (sub!.resubmit_count ?? 0) + 1,
+    // No score while the student is fixing the work. Any earlier score is cleared.
+    score: null, graded_by: null, graded_at: null, changed_after_grading: false,
+  }).eq("id", sub!.id);
+  if (error) back(to, "error", "Could not save. Please try again.");
+  revalidatePath("/dashboard", "layout");
+  back(to, "ok", "Resubmission asked. The student can now send new links for the ones you switched on.");
+}
+
+export async function cancelResubmit(formData: FormData) {
+  const { supabase } = await requireStaff();
+  const to = str(formData, "return_to");
+  const { error } = await supabase.from("submissions").update({ resubmit_asked: false, resubmit_links: [] }).eq("id", str(formData, "submission_id"));
+  if (error) back(to, "error", "Could not cancel. Please try again.");
+  revalidatePath("/dashboard", "layout");
+  back(to, "ok", "Resubmission cancelled. The submission is back in To mark.");
 }
