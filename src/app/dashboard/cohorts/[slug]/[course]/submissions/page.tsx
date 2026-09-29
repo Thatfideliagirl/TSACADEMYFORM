@@ -99,6 +99,15 @@ export default async function SubmissionsPage({ params, searchParams }: { params
           </select></div>
         <div className="flex min-w-[9rem] flex-col gap-1"><label htmlFor="x-format" className="text-xs font-semibold text-muted">File type</label>
           <select id="x-format" name="format" className={field}><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV</option></select></div>
+        <input type="hidden" name="pick" value="1" />
+        <fieldset className="flex w-full flex-col gap-2">
+          <legend className="text-xs font-semibold text-muted">What to put in the sheet (name, email, task and date are always there)</legend>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <label className="flex items-center gap-2"><input type="checkbox" name="cols" value="links" defaultChecked /> The links they sent</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="cols" value="score" defaultChecked /> Score and comment</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="cols" value="marking" /> Who marked, reviewed ticks and requests</label>
+          </div>
+        </fieldset>
         <button className="rounded-xl border-[1.5px] border-brand px-4 py-2 font-semibold text-brand hover:bg-sky">Download spreadsheet</button>
       </form>
 

@@ -70,7 +70,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const keys: string[] = [];
     for (const t of tasks ?? []) for (const k of t.required_links as string[]) if (!keys.includes(k)) keys.push(k);
-    header = ["Full name", "Email", "Cohort", "Task", "Type", "Submitted at", ...keys.map(labelOf), "All links reviewed", "Score", "Out of", "Comment", "Request used", "Graded by", "Links not verified", "Changed after grading"];
+    // The person chooses what goes in the sheet. Name, email, task and date are always there.
+    const pick = sp.get("pick") === "1";
+    const want = new Set(sp.getAll("cols"));
+    const has = (k: string) => !pick || want.has(k);
+    header = ["Full name", "Email", "Cohort", "Task", "Type", "Submitted at",
+      ...(has("links") ? keys.map(labelOf) : []),
+      ...(has("score") ? ["Score", "Out of", "Comment"] : []),
+      ...(has("marking") ? ["All links reviewed", "Request used", "Graded by", "Changed after grading"] : [])];
     const taskBy = new Map((tasks ?? []).map((t) => [t.id, t]));
     rows = subs.map((s) => {
       const st = first(s.students as One<{ full_name: string; email: string }>);
@@ -80,13 +87,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const r = reqBy.get(s.id);
       return [
         st?.full_name ?? "", st?.email ?? "", cohort.name, t.title, t.kind === "capstone" ? "Capstone" : "Assignment", showLagos(s.submitted_at),
-        ...keys.map((k) => links[k] ?? ""),
-        Object.keys(links).length > 0 && Object.keys(links).every((k) => reviewed[k]) ? "Yes" : "No",
-        s.score ?? "", t.max_score, s.comment ?? "",
-        r ? `${r.kind === "note" ? "Note" : "Replace link"} (${r.status})` : "No",
-        s.graded_by ? names.get(s.graded_by) ?? "" : "",
-        ((s.unverified_links ?? []) as string[]).map(labelOf).join(", "),
-        s.changed_after_grading ? "Yes" : "No",
+        ...(has("links") ? keys.map((k) => links[k] ?? "") : []),
+        ...(has("score") ? [s.score ?? "", t.max_score, s.comment ?? ""] : []),
+        ...(has("marking") ? [
+          Object.keys(links).length > 0 && Object.keys(links).every((k) => reviewed[k]) ? "Yes" : "No",
+          r ? `${r.kind === "note" ? "Note" : "Replace link"} (${r.status})` : "No",
+          s.graded_by ? names.get(s.graded_by) ?? "" : "",
+          s.changed_after_grading ? "Yes" : "No",
+        ] : []),
       ];
     });
     label = scope === "all" ? "all-tasks" : scope.startsWith("task:") ? (tasks?.[0]?.title ?? "task") : scope;
