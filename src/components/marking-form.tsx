@@ -35,7 +35,16 @@ export function MarkingForm({
   const body = asking
     ? text([`Hello ${mail.firstName},`, "", `Thank you for sending your ${mail.taskTitle}.`, fb.trim(), "", `Please send a new link for: ${labels.join(", ")}.`, `Use this link: ${mail.taskLink}`, "", "Thank you."])
     : text([`Hello ${mail.firstName},`, "", score !== null && mark !== "" ? `Your ${mail.taskTitle} has been marked: ${mark} out of ${maxScore}.` : `I have looked at your ${mail.taskTitle}.`, note.trim(), "", "Thank you."]);
-  const mailto = `mailto:${encodeURIComponent(mail.to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  // The address stays readable (the @ must not be encoded, some mail apps refuse it). Only the subject and message are encoded.
+  const mailto = `mailto:${mail.to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  // Not everyone has a mail app set up on the device, so there is also a Gmail link that opens in the browser, and a copy button.
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(mail.to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const [copied, setCopied] = useState(false);
+  async function copyMessage() {
+    const all = `To: ${mail.to}\nSubject: ${subject}\n\n${body}`;
+    try { await navigator.clipboard.writeText(all); setCopied(true); setTimeout(() => setCopied(false), 2500); }
+    catch { window.prompt?.("Copy this message", all); }
+  }
 
   return (
     <form className="flex flex-col gap-4 border-t border-line px-4 py-4">
@@ -119,6 +128,8 @@ export function MarkingForm({
           <button formAction={saveGrade} className="rounded-xl bg-brand px-5 py-2.5 font-display font-semibold text-white hover:bg-brand-dark">Save score</button>
         )}
         <a href={mailto} className="rounded-xl border-[1.5px] border-brand px-4 py-2 font-semibold text-brand hover:bg-sky">Email this student</a>
+        <a href={gmail} target="_blank" rel="noopener noreferrer" className="rounded-xl border-[1.5px] border-line px-4 py-2 font-semibold text-brand hover:bg-sky">Open in Gmail</a>
+        <button type="button" onClick={copyMessage} className="rounded-xl border-[1.5px] border-line px-4 py-2 font-semibold text-brand hover:bg-sky" aria-live="polite">{copied ? "Copied" : "Copy message"}</button>
         {asked && <button formAction={cancelResubmit} formNoValidate className="rounded-xl border-[1.5px] border-line px-4 py-2 font-semibold text-muted hover:bg-sky">Cancel resubmission</button>}
         {resubmitted && !asking && <span className="rounded-full bg-[#e1f2e9] px-3 py-1 text-sm font-semibold text-pass">Resubmitted, ready to mark</span>}
       </div>
