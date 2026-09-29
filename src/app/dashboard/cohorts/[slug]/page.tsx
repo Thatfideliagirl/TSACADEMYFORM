@@ -20,7 +20,7 @@ export default async function CohortPage({ params, searchParams }: {
   // The cohort, its courses and their moderators come back in one trip.
   const [{ data: cohort }, { data: allCourses }] = await Promise.all([
     supabase.from("cohorts")
-      .select("id, name, slug, is_open, cohort_courses(id, form_name, is_open, created_at, courses(id, name, slug), cohort_course_moderators(user_id))")
+      .select("id, name, slug, is_open, cohort_courses(id, form_name, is_open, created_at, courses(id, name, slug), cohort_course_moderators(user_id, profiles(full_name)))")
       .eq("slug", slug).maybeSingle(),
     isAdmin ? supabase.from("courses").select("id, name").order("name") : Promise.resolve({ data: [] }),
   ]);
@@ -51,7 +51,9 @@ export default async function CohortPage({ params, searchParams }: {
         <ul className="grid gap-4 sm:grid-cols-2">
           {rows.map((r) => {
             const course = first(r.courses);
-            const mods = (r.cohort_course_moderators ?? []).length;
+            const modTotal = (r.cohort_course_moderators ?? []).length;
+            const modNames = (r.cohort_course_moderators ?? []).map((m) => first(m.profiles)?.full_name).filter(Boolean) as string[];
+            const modText = !modTotal ? "No moderator yet" : `Moderator${modTotal === 1 ? "" : "s"}: ${[...modNames, ...(modTotal > modNames.length ? [`${modTotal - modNames.length} more`] : [])].join(", ")}`;
             return (
               <li key={r.id}>
                 <Link href={`/dashboard/cohorts/${cohort.slug}/${course?.slug}`} className="block h-full rounded-2xl border border-line bg-white p-5 transition hover:border-brand hover:shadow-sm">
@@ -60,7 +62,7 @@ export default async function CohortPage({ params, searchParams }: {
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.is_open ? "bg-[#e1f2e9] text-pass" : "bg-sky-deep text-muted"}`}>{r.is_open ? "Open" : "Closed"}</span>
                   </div>
                   <p className="mt-2 text-sm text-muted">Form: {r.form_name}</p>
-                  <p className="text-sm text-muted">{mods} moderator{mods === 1 ? "" : "s"}</p>
+                  <p className="text-sm text-muted">{modText}</p>
                 </Link>
               </li>
             );

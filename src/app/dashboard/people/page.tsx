@@ -9,7 +9,7 @@ export default async function PeoplePage() {
   const { supabase } = await requireAdmin();
 
   const [{ data: staff }, { data: invites }, { data: rows }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, email, role, cohort_course_moderators(cohort_course_id)").order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, role, cohort_course_moderators(cohort_course_id, cohort_courses(cohorts(name), courses(name)))").order("full_name"),
     supabase.from("invites").select("id, email, role, created_at").is("used_at", null).order("created_at", { ascending: false }),
     supabase.from("cohort_courses").select("id, cohorts(name, created_at), courses(name)").order("created_at", { ascending: false }),
   ]);
@@ -53,9 +53,18 @@ export default async function PeoplePage() {
         <ul className="flex flex-col gap-2">
           {(staff ?? []).map((s) => (
             <li key={s.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line bg-white px-4 py-3">
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold">{s.full_name}</p>
-                <p className="text-sm text-muted">{s.email}, {s.role}{s.role === "moderator" && `, ${(s.cohort_course_moderators ?? []).length} course${(s.cohort_course_moderators ?? []).length === 1 ? "" : "s"}`}</p>
+                <p className="text-sm text-muted">{s.email}, {s.role}</p>
+                {s.role === "moderator" && (
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                    {(s.cohort_course_moderators ?? []).map((m) => {
+                      const cc = first(m.cohort_courses);
+                      return <li key={m.cohort_course_id} className="rounded-full bg-sky px-2.5 py-0.5 text-xs font-semibold text-brand">{first(cc?.courses ?? null)?.name ?? "Course"}, {first(cc?.cohorts ?? null)?.name ?? "Cohort"}</li>;
+                    })}
+                    {!(s.cohort_course_moderators ?? []).length && <li className="text-xs text-muted">No course given yet</li>}
+                  </ul>
+                )}
               </div>
               <NewCodeButton email={s.email} role={s.role} label="Locked out? New code" />
             </li>
