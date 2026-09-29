@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { BackLink } from "@/components/back-link";
-import { headers } from "next/headers";
-import { notFound } from "next/navigation";
-import { requireStaff } from "@/lib/staff";
 import { Banner } from "@/components/banner";
 import { CopyButton } from "@/components/copy-button";
-import { DangerZone } from "@/components/danger-zone";
 import { CourseNav } from "@/components/course-nav";
+import { DangerZone } from "@/components/danger-zone";
+import { getCourseContext } from "@/lib/course-context";
 import { courseStats } from "@/lib/course-stats";
-import { assignModerator, removeCourseFromCohort, removeModerator, updateCohortCourse } from "@/app/actions/cohorts";
+import { siteOrigin } from "@/lib/origin";
+import { assignModerator, removeCourseFromCohort, removeModerator, updateCohortCourse, updateFormAddress } from "@/app/actions/cohorts";
 
 type One<T> = T | T[] | null;
 const first = <T,>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v);
+const box = "rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 focus:border-brand focus:outline-none";
 
 export default async function CoursePage({ params, searchParams }: {
   params: Promise<{ slug: string; course: string }>; searchParams: Promise<{ error?: string; ok?: string; kind?: string }>;
@@ -19,30 +19,30 @@ export default async function CoursePage({ params, searchParams }: {
   const { slug, course: courseSlug } = await params;
   const { error, ok, kind: kindParam } = await searchParams;
   const kind = kindParam === "assignment" || kindParam === "capstone" ? kindParam : "all";
-  const { supabase, profile } = await requireStaff();
+  const { supabase, profile, cohort, course, cc } = await getCourseContext(slug, courseSlug);
   const isAdmin = profile.role === "admin";
-
-  const { data: cohort } = await supabase.from("cohorts").select("id, name, slug").eq("slug", slug).maybeSingle();
-  const { data: course } = await supabase.from("courses").select("id, name, slug").eq("slug", courseSlug).maybeSingle();
-  if (!cohort || !course) notFound();
-
-  const { data: cc } = await supabase
-    .from("cohort_courses")
-    .select("id, form_name, form_slug, is_open, cohort_course_moderators(user_id, profiles(full_name, email))")
-    .eq("cohort_id", cohort.id).eq("course_id", course.id).maybeSingle();
-  if (!cc) notFound();
-
-  const { data: moderators } = isAdmin ? await supabase.from("profiles").select("id, full_name, email").eq("role", "moderator").order("full_name") : { data: [] };
-  const mods = (cc.cohort_course_moderators ?? []) as { user_id: string; profiles: One<{ full_name: string; email: string }> }[];
-  const assigned = new Set(mods.map((m) => m.user_id));
-  const canAdd = (moderators ?? []).filter((m) => !assigned.has(m.id));
-
-  const stats = await courseStats(supabase, cc.id, kind);
   const base = `/dashboard/cohorts/${cohort.slug}/${course.slug}`;
 
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const link = `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}/submit/${cc.form_slug}`;
+  const [stats, { data: modRows }, { data: allMods }, origin] = await Promise.all([
+    courseStats(supabase, cc.id, kind),
+    supabase.from("cohort_course_moderators").select("user_id, profiles(full_name, email)").eq("cohort_course_id", cc.id),
+    isAdmin ? supabase.from("profiles").select("id, full_name, email").eq("role", "moderator").order("full_name") : Promise.resolve({ data: [] }),
+    siteOrigin(),
+  ]);
+  const mods = (modRows ?? []) as { user_id: string; profiles: One<{ full_name: string; email: string }> }[];
+  const assigned = new Set(mods.map((m) => m.user_id));
+  const canAdd = (allMods ?? []).filter((m) => !assigned.has(m.id));
+  const link = `${origin}/submit/${cc.form_slug}`;
+
+  const tiles: [string, number, string, string][] = [
+    ["Students", stats.students, "", "on the list"],
+    ["Sent something", stats.studentsSent, "", "students"],
+    ["Sent nothing yet", stats.studentsNothing, stats.studentsNothing > 0 ? "text-navy" : "", "students"],
+    ["Submissions received", stats.submissions, "", `of ${stats.expected} expected`],
+    ["Waiting to be marked", stats.waiting, stats.waiting > 0 ? "text-brand" : "", "submissions"],
+    ["Marked", stats.graded, "", "submissions"],
+    ["Pending requests", stats.pendingRequests, stats.pendingRequests > 0 ? "text-fail" : "", "to decide"],
+  ];
 
   return (
     <div className="flex flex-col gap-8">
@@ -53,7 +53,6 @@ export default async function CoursePage({ params, searchParams }: {
       </div>
 
       <CourseNav base={base} active="" pending={stats.pendingRequests} />
-
       <Banner error={error} ok={ok} />
 
       <section className="flex flex-col gap-4">
@@ -66,21 +65,21 @@ export default async function CoursePage({ params, searchParams }: {
             ))}
           </div>
         </div>
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {([
-            ["Students", stats.students, ""],
-            ["Submitted", stats.submitted, ""],
-            ["Not yet submitted", stats.notSubmitted, stats.notSubmitted > 0 ? "text-navy" : ""],
-            ["Marked", stats.graded, ""],
-            ["Waiting to be marked", stats.ungraded, stats.ungraded > 0 ? "text-brand" : ""],
-            ["Pending requests", stats.pendingRequests, stats.pendingRequests > 0 ? "text-fail" : ""],
-          ] as const).map(([label, n, tone]) => (
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {tiles.map(([label, n, tone, note]) => (
             <div key={label} className="rounded-2xl border border-line bg-white p-4">
               <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
               <dd className={`mt-1 font-display text-3xl font-semibold ${tone}`}>{n}</dd>
+              <dd className="text-xs text-muted">{note}</dd>
             </div>
           ))}
         </dl>
+        {stats.taskCount > 0 && (
+          <p className="text-sm text-muted">
+            Every student is expected to send every task: {stats.students} student{stats.students === 1 ? "" : "s"} times {stats.taskCount} task{stats.taskCount === 1 ? "" : "s"} is {stats.expected} submissions.
+            {" "}{stats.submissions} received, so {stats.missing} {stats.missing === 1 ? "is" : "are"} still missing.
+          </p>
+        )}
         {stats.progress.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-line bg-white px-6 py-8 text-center text-muted">
             No tasks here yet. <Link href={`${base}/tasks/new`} className="font-semibold text-brand underline">Create the first task</Link>.
@@ -114,8 +113,7 @@ export default async function CoursePage({ params, searchParams }: {
             <input type="hidden" name="course_slug" value={course.slug} />
             <div className="flex flex-col gap-1.5">
               <label htmlFor="form-name" className="text-sm font-semibold">Name students see on the form</label>
-              <input id="form-name" name="form_name" defaultValue={cc.form_name} required
-                className="rounded-xl border-[1.5px] border-line px-3 py-2.5 focus:border-brand focus:outline-none" />
+              <input id="form-name" name="form_name" defaultValue={cc.form_name} required className={box} />
             </div>
             <label className="flex items-center gap-3 font-medium">
               <input type="checkbox" name="is_open" defaultChecked={cc.is_open} className="h-5 w-5 accent-brand" />
@@ -129,13 +127,28 @@ export default async function CoursePage({ params, searchParams }: {
               <code className="min-w-0 flex-1 truncate text-sm">{link}</code>
               <CopyButton text={link} />
             </div>
-            <p className="text-sm text-muted">Share this link with the students of this course. The form itself is built in a later stage. The address is reserved now and will not change.</p>
+            <p className="text-sm text-muted">Share this link with the students of this course.</p>
+            {isAdmin && (
+              <form action={updateFormAddress} className="mt-2 flex flex-col gap-1.5 rounded-xl border border-line p-3">
+                <input type="hidden" name="cohort_course_id" value={cc.id} />
+                <input type="hidden" name="cohort_slug" value={cohort.slug} />
+                <input type="hidden" name="course_slug" value={course.slug} />
+                <label htmlFor="address" className="text-sm font-semibold">Change the end of the link</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted">/submit/</span>
+                  <input id="address" name="address" defaultValue={cc.form_slug} required className={`${box} min-w-0 flex-1`} />
+                  <button className="rounded-lg border-[1.5px] border-line px-3 py-2 text-sm font-semibold text-brand hover:bg-sky">Change</button>
+                </div>
+                <p className="text-xs text-muted">Letters, numbers and dashes only. If you change it, links you already shared stop working, so send the new one.</p>
+              </form>
+            )}
           </div>
         </div>
       </section>
 
       <section className="rounded-2xl border border-line bg-white p-6">
         <h2 className="font-display text-xl font-semibold">Moderators</h2>
+        <p className="mt-1 text-sm text-muted">A course can have as many moderators as you need. Each one sees only the courses given to them.</p>
         {mods.length === 0 ? (
           <p className="mt-3 text-muted">No moderator has been given this course yet.</p>
         ) : (
@@ -161,8 +174,7 @@ export default async function CoursePage({ params, searchParams }: {
           <form action={assignModerator} className="mt-4 flex gap-2">
             <input type="hidden" name="cohort_course_id" value={cc.id} />
             <label htmlFor="add-mod" className="sr-only">Add a moderator</label>
-            <select id="add-mod" name="user_id" required defaultValue=""
-              className="min-w-0 flex-1 rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 focus:border-brand focus:outline-none">
+            <select id="add-mod" name="user_id" required defaultValue="" className={`${box} min-w-0 flex-1`}>
               <option value="" disabled>Choose a moderator</option>
               {canAdd.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
             </select>
@@ -170,11 +182,10 @@ export default async function CoursePage({ params, searchParams }: {
           </form>
         ) : (
           <p className="mt-4 text-sm text-muted">
-            {(moderators ?? []).length ? "Every moderator already has this course." : <>There are no moderators yet. <Link href="/dashboard/people" className="font-semibold text-brand underline">Invite one</Link>.</>}
+            {(allMods ?? []).length ? "Every moderator already has this course." : <>There are no moderators yet. <Link href="/dashboard/people" className="font-semibold text-brand underline">Invite one</Link>.</>}
           </p>
         ))}
       </section>
-
 
       {isAdmin && (
         <DangerZone title="Remove this course from the cohort" confirmWord={course.name} action={removeCourseFromCohort} buttonLabel="Remove course for good"

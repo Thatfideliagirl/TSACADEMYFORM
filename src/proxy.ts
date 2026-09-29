@@ -21,7 +21,7 @@ export async function proxy(request: NextRequest) {
   // The student form has no sign in, so there is nothing to refresh or protect there.
   if (request.nextUrl.pathname.startsWith("/submit")) return NextResponse.next();
   let response = NextResponse.next({ request });
-  let user;
+  let signedIn = false;
   try {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,13 +37,14 @@ export async function proxy(request: NextRequest) {
         },
       },
     );
-    user = (await supabase.auth.getUser()).data.user;
+    // Reads the saved sign in and renews it when it is about to run out. No network trip unless it needs renewing.
+    signedIn = Boolean((await supabase.auth.getSession()).data.session);
   } catch (e) {
     console.error("Supabase check failed", e);
     return notice("Cannot reach the database",
       "<p>The site could not talk to Supabase. Check that NEXT_PUBLIC_SUPABASE_URL starts with https:// and has no spaces, and that NEXT_PUBLIC_SUPABASE_ANON_KEY is the full key. Then redeploy.</p>", 503);
   }
-  if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
+  if (!signedIn && request.nextUrl.pathname.startsWith("/dashboard")) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
   return response;

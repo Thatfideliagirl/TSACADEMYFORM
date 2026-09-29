@@ -68,36 +68,36 @@ export default async function SubmissionsPage({ params, searchParams }: { params
       <CourseNav base={base} active="submissions" />
       <Banner error={sp.error} ok={sp.ok} />
 
-      <form className="grid gap-3 rounded-2xl border border-line bg-white p-4 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1.2fr_auto]">
-        <div className="flex flex-col gap-1"><label htmlFor="f-task" className="text-xs font-semibold text-muted">Task</label>
+      <form className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-4">
+        <div className="flex min-w-[10rem] flex-1 flex-col gap-1"><label htmlFor="f-task" className="text-xs font-semibold text-muted">Task</label>
           <select id="f-task" name="task" defaultValue={sp.task ?? ""} className={field}>
             <option value="">All tasks</option>{(tasks ?? []).map((t) => <option key={t.id} value={t.slug}>{t.title}</option>)}
           </select></div>
-        <div className="flex flex-col gap-1"><label htmlFor="f-kind" className="text-xs font-semibold text-muted">Type</label>
+        <div className="flex min-w-[10rem] flex-1 flex-col gap-1"><label htmlFor="f-kind" className="text-xs font-semibold text-muted">Type</label>
           <select id="f-kind" name="kind" defaultValue={sp.kind ?? ""} className={field}>
             <option value="">Assignments and capstone</option><option value="assignment">Assignments</option><option value="capstone">Capstone</option>
           </select></div>
-        <div className="flex flex-col gap-1"><label htmlFor="f-graded" className="text-xs font-semibold text-muted">Marking</label>
+        <div className="flex min-w-[10rem] flex-1 flex-col gap-1"><label htmlFor="f-graded" className="text-xs font-semibold text-muted">Marking</label>
           <select id="f-graded" name="graded" defaultValue={sp.graded ?? ""} className={field}>
             <option value="">Marked and unmarked</option><option value="ungraded">Waiting to be marked</option><option value="graded">Marked</option>
           </select></div>
-        <div className="flex flex-col gap-1"><label htmlFor="f-q" className="text-xs font-semibold text-muted">Name or email</label>
+        <div className="flex min-w-[10rem] flex-1 flex-col gap-1"><label htmlFor="f-q" className="text-xs font-semibold text-muted">Name or email</label>
           <input id="f-q" name="q" defaultValue={sp.q ?? ""} placeholder="Search" className={field} /></div>
-        <div className="flex items-end gap-2">
-          <button className="rounded-xl bg-brand px-4 py-2 font-display font-semibold text-white hover:bg-brand-dark">Filter</button>
+        <div className="flex items-center gap-3">
+          <button className="rounded-xl bg-brand px-5 py-2 font-display font-semibold text-white hover:bg-brand-dark">Filter</button>
           <Link href={`${base}/submissions`} className="px-1 py-2 text-sm font-semibold text-brand">Clear</Link>
         </div>
       </form>
 
       <form action={`${base}/export`} method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-4">
-        <div className="flex flex-col gap-1"><label htmlFor="x-scope" className="text-xs font-semibold text-muted">Download</label>
+        <div className="flex min-w-[10rem] flex-1 flex-col gap-1"><label htmlFor="x-scope" className="text-xs font-semibold text-muted">Download</label>
           <select id="x-scope" name="scope" defaultValue={sp.task ? `task:${sp.task}` : "all"} className={field}>
             <option value="all">Everything in this course</option>
             <option value="assignments">All assignments</option>
             <option value="capstone">The capstone</option>
             {(tasks ?? []).map((t) => <option key={t.id} value={`task:${t.slug}`}>{t.title}</option>)}
           </select></div>
-        <div className="flex flex-col gap-1"><label htmlFor="x-format" className="text-xs font-semibold text-muted">File type</label>
+        <div className="flex min-w-[9rem] flex-col gap-1"><label htmlFor="x-format" className="text-xs font-semibold text-muted">File type</label>
           <select id="x-format" name="format" className={field}><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV</option></select></div>
         <button className="rounded-xl border-[1.5px] border-brand px-4 py-2 font-semibold text-brand hover:bg-sky">Download spreadsheet</button>
       </form>

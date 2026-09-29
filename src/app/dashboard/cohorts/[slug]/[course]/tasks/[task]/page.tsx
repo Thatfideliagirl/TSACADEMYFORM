@@ -29,7 +29,7 @@ export default async function EditTaskPage({ params, searchParams }: {
         <p className="mt-1 text-muted">{course.name}, {cohort.name}</p>
       </div>
       <Banner error={error} />
-      <TaskForm ctx={{ cohortCourseId: cc.id, cohortSlug: cohort.slug, courseSlug: course.slug }} task={task} hasSubmissions={(count ?? 0) > 0} types={allTypes(custom ?? []).map(({ key, label }) => ({ key, label }))} />
+      <TaskForm ctx={{ cohortCourseId: cc.id, cohortSlug: cohort.slug, courseSlug: course.slug, formSlug: cc.form_slug }} task={task} hasSubmissions={(count ?? 0) > 0} types={allTypes(custom ?? []).map(({ key, label }) => ({ key, label }))} />
       <DangerZone title="Delete this task" confirmWord={task.title} action={deleteTask} buttonLabel="Delete task for good"
         warning={`This removes the task and every submission for it${count ? ` (${count} so far)` : ""}. It cannot be undone.`}>
         <input type="hidden" name="task_id" value={task.id} />

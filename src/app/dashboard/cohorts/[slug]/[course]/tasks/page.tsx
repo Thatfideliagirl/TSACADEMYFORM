@@ -85,13 +85,13 @@ export default async function TasksPage({ params, searchParams }: {
         <h2 className="font-display text-xl font-semibold">Other kinds of link</h2>
         <p className="mt-1 text-sm text-muted">
           Google Docs, Sheets, Slides, Drive, Notion, Canva, Trello, Gamma, Figma, Loom, GitHub, YouTube and Miro are ready to tick.
-          Need something else? Add it here. Students will be told if they paste a link from the wrong website.
+          Need something else? Add it here, then tick it when you create a task.
         </p>
         {!!customRows?.length && (
           <ul className="mt-4 flex flex-col gap-2">
             {customRows.map((c) => (
               <li key={c.key} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line px-4 py-2.5">
-                <span><span className="font-semibold">{c.label}</span><span className="block text-sm text-muted">{(c.domains as string[]).join(", ")}</span></span>
+                <span><span className="font-semibold">{c.label}</span><span className="block text-sm text-muted">Links from {(c.domains as string[]).join(", ")}</span>{c.hint && <span className="block text-sm text-muted">Students see: {c.hint}</span>}</span>
                 <form action={deleteLinkType}>
                   <input type="hidden" name="key" value={c.key} />
                   <input type="hidden" name="cohort_slug" value={cohort.slug} />
@@ -110,12 +110,20 @@ export default async function TasksPage({ params, searchParams }: {
             <input id="lt-label" name="label" required placeholder="Behance portfolio" className="rounded-xl border-[1.5px] border-line px-3 py-2.5 focus:border-brand focus:outline-none" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="lt-site" className="text-sm font-semibold">Website it comes from</label>
+            <label htmlFor="lt-site" className="text-sm font-semibold">Website the links must come from</label>
             <input id="lt-site" name="website" required placeholder="behance.net" className="rounded-xl border-[1.5px] border-line px-3 py-2.5 focus:border-brand focus:outline-none" />
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <label htmlFor="lt-hint" className="text-sm font-semibold">How students make the link public <span className="font-normal text-muted">(optional)</span></label>
+            <label htmlFor="lt-hint" className="text-sm font-semibold">Steps students follow to share it <span className="font-normal text-muted">(optional)</span></label>
             <input id="lt-hint" name="hint" placeholder="Publish the project, then copy the link from your browser." className="rounded-xl border-[1.5px] border-line px-3 py-2.5 focus:border-brand focus:outline-none" />
+          </div>
+          <div className="rounded-xl bg-sky px-4 py-3 text-sm sm:col-span-2">
+            <p className="font-semibold">How this works</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-muted">
+              <li>The website: a student who pastes a link from any other website is told it is the wrong kind, for example a Figma link in a Behance box.</li>
+              <li>Whether it opens for anyone: the system tries the link like a stranger and checks by itself. You do not set this up. If a website blocks the check, the student can still submit and you see &quot;Could not verify&quot; on their submission.</li>
+              <li>The steps: every website has its own way to share, so the system cannot know them. Type the steps here and students see them under the box. Leave it empty and they see a general message.</li>
+            </ul>
           </div>
           <button className="self-start rounded-xl bg-brand px-5 py-2.5 font-display font-semibold text-white hover:bg-brand-dark sm:col-span-2">Add kind of link</button>
         </form>

@@ -27,7 +27,7 @@ async function addCourses(supabase: Awaited<ReturnType<typeof requireAdmin>>["su
   if (!courseIds.length) return;
   const { data: courses } = await supabase.from("courses").select("id, name, slug").in("id", courseIds);
   for (const c of courses ?? []) {
-    await insertWithFreeSlug(`${cohortSlug}-${c.slug}`, (slug) =>
+    await insertWithFreeSlug(`${c.slug}-${cohortSlug}`, (slug) =>
       supabase.from("cohort_courses").insert({
         cohort_id: cohortId, course_id: c.id, form_name: `${c.name} Submissions`, form_slug: slug,
       }).select("id").single());
@@ -72,7 +72,7 @@ export async function deleteCohort(formData: FormData) {
   }
   await supabase.from("cohorts").delete().eq("id", cohort!.id);
   refresh();
-  redirect("/dashboard");
+  redirect("/dashboard/cohorts");
 }
 
 export async function addCourseToCohort(formData: FormData) {
@@ -124,4 +124,16 @@ export async function removeModerator(formData: FormData) {
   await supabase.from("cohort_course_moderators").delete()
     .eq("cohort_course_id", str(formData, "cohort_course_id")).eq("user_id", str(formData, "user_id"));
   refresh();
+}
+
+// Only admins can change the web address of a form. Links already shared stop working, so the page warns first.
+export async function updateFormAddress(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const path = `/dashboard/cohorts/${str(formData, "cohort_slug")}/${str(formData, "course_slug")}`;
+  const address = slugify(str(formData, "address"));
+  if (!str(formData, "address")) back(path, "error", "Type the address you want, for example virtual-assistant.");
+  const { error } = await supabase.from("cohort_courses").update({ form_slug: address }).eq("id", str(formData, "cohort_course_id"));
+  if (error) back(path, "error", error.code === "23505" ? "Another course already uses that address. Try a different one." : "Could not change the address.");
+  revalidatePath("/dashboard", "layout");
+  back(path, "ok", `The form address is now /submit/${address}`);
 }

@@ -40,15 +40,17 @@ export async function saveTask(_prev: FormState, formData: FormData): Promise<Fo
   if (taskId) {
     // Once students have submitted, the links asked for stay as they are, so old submissions still make sense.
     const { count } = await supabase.from("submissions").select("id", { count: "exact", head: true }).eq("task_id", taskId);
-    const { error } = await supabase.from("tasks").update((count ?? 0) > 0 ? fields : { ...fields, required_links: links }).eq("id", taskId);
-    if (error) return { error: "Could not save the task." };
+    const wanted = str(formData, "slug_new");
+    const address = wanted ? { slug: slugify(wanted) } : {};
+    const { error } = await supabase.from("tasks").update({ ...((count ?? 0) > 0 ? fields : { ...fields, required_links: links }), ...address }).eq("id", taskId);
+    if (error) return { error: error.code === "23505" ? "Another task in this course already uses that address. Try a different one." : "Could not save the task." };
     revalidatePath("/dashboard", "layout");
     go(list, "ok", "Task saved.");
   }
 
   const { data: cc } = await supabase.from("cohort_courses").select("form_slug").eq("id", str(formData, "cohort_course_id")).single();
   if (!cc) return { error: "Could not find this course." };
-  const base = slugify(`${cc!.form_slug}-${title}`);
+  const base = slugify(title);
   for (let i = 1; i <= 20; i++) {
     const slug = i === 1 ? base : `${base}-${i}`;
     const { error } = await supabase.from("tasks").insert({

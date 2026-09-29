@@ -4,7 +4,9 @@ import { getCourseContext } from "@/lib/course-context";
 import { Banner } from "@/components/banner";
 import { CourseNav } from "@/components/course-nav";
 import { RosterUploader } from "@/components/roster-uploader";
-import { addStudent, deleteStudent, updateStudent } from "@/app/actions/students";
+import { BulkSelect } from "@/components/bulk-select";
+import { DangerZone } from "@/components/danger-zone";
+import { addStudent, deleteAllStudents, deleteStudent, deleteStudents, updateStudent } from "@/app/actions/students";
 
 const input = "min-w-0 rounded-xl border-[1.5px] border-line bg-white px-3 py-2 focus:border-brand focus:outline-none";
 
@@ -78,9 +80,15 @@ export default async function StudentsPage({ params, searchParams }: {
             {term ? "No student matches that search." : "No students yet. Upload a list above, or add one."}
           </p>
         ) : (
+          <>
+          <form id="bulk-delete" action={deleteStudents}>{hiddenFields}</form>
+          <BulkSelect formId="bulk-delete" total={students.length} />
           <ul className="flex flex-col gap-2">
             {students.map((s) => (
               <li key={s.id} className="flex flex-wrap items-end gap-2 rounded-xl border border-line bg-white p-3">
+                <label className="flex h-10 items-center pr-1">
+                  <input type="checkbox" name="ids" value={s.id} form="bulk-delete" aria-label={`Select ${s.full_name}`} className="h-5 w-5 accent-brand" />
+                </label>
                 <form action={updateStudent} className="flex min-w-0 flex-1 flex-wrap items-end gap-2">
                   {hiddenFields}<input type="hidden" name="id" value={s.id} />
                   <div className="flex min-w-40 flex-1 flex-col gap-1">
@@ -100,9 +108,17 @@ export default async function StudentsPage({ params, searchParams }: {
               </li>
             ))}
           </ul>
+          </>
         )}
         {emails.length > 300 && !term && <p className="text-sm text-muted">Showing the first 300 students. Use the search to find others.</p>}
       </section>
+
+      {emails.length > 0 && (
+        <DangerZone title="Remove everyone from this list" confirmWord="remove everyone" action={deleteAllStudents} buttonLabel="Empty the list"
+          warning={`This removes all ${emails.length} students and everything they submitted. Use it when you want to upload a fresh list. It cannot be undone.`}>
+          {hiddenFields}
+        </DangerZone>
+      )}
     </div>
   );
 }
