@@ -55,11 +55,11 @@ export function NotificationBell() {
   if (hidden || !data) return null;
   const count = data.count;
 
-  async function markSeen() {
+  async function markSeen(keepalive = false) {
     if (!data) return;
     setBusy(true);
     try {
-      const res = await fetch("/api/notifications", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ now: data.now }) });
+      const res = await fetch("/api/notifications", { method: "POST", keepalive, headers: { "content-type": "application/json" }, body: JSON.stringify({ now: data.now }) });
       if (res.ok) setData({ ...data, count: 0, items: data.items.map((i) => ({ ...i, isNew: false })) });
     } finally { setBusy(false); }
   }
@@ -84,7 +84,7 @@ export function NotificationBell() {
           className="fixed inset-x-3 top-[var(--bell-top)] z-50 max-h-[75vh] overflow-y-auto rounded-2xl border border-line bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[24rem]">
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
             <p className="font-display text-lg font-semibold">Notifications</p>
-            {count > 0 && <button type="button" onClick={markSeen} disabled={busy} className="text-sm font-semibold text-brand disabled:opacity-60">Mark all as seen</button>}
+            {count > 0 && <button type="button" onClick={() => markSeen()} disabled={busy} className="text-sm font-semibold text-brand disabled:opacity-60">Mark all as seen</button>}
           </div>
           {!data?.items.length ? (
             <p className="px-4 py-8 text-center text-sm text-muted">No submissions yet. New ones will show here.</p>
@@ -92,7 +92,7 @@ export function NotificationBell() {
             <ul>
               {data.items.map((i) => (
                 <li key={i.id} className="border-b border-line last:border-b-0">
-                  <Link href={i.href} onClick={() => setOpen(false)} className={`flex gap-3 px-4 py-3 hover:bg-sky ${i.isNew ? "bg-sky/60" : ""}`}>
+                  <Link href={i.href} onClick={() => { setOpen(false); if (count > 0) { setData({ ...data, count: 0, items: data.items.map((x) => ({ ...x, isNew: false })) }); markSeen(true); } }} className={`flex gap-3 px-4 py-3 hover:bg-sky ${i.isNew ? "bg-sky/60" : ""}`}>
                     <span aria-hidden="true" className={`mt-1.5 h-2.5 w-2.5 flex-none rounded-full ${i.isNew ? "bg-brand" : "bg-transparent"}`} />
                     <span className="min-w-0">
                       <span className="block text-sm"><span className="font-semibold">{i.student}</span> sent {i.task}</span>
