@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BackLink } from "@/components/back-link";
 import { getCourseContext } from "@/lib/course-context";
 import { Banner } from "@/components/banner";
+import { CourseNav } from "@/components/course-nav";
 import { RosterUploader } from "@/components/roster-uploader";
 import { addStudent, deleteStudent, updateStudent } from "@/app/actions/students";
 
@@ -39,6 +40,8 @@ export default async function StudentsPage({ params, searchParams }: {
           {" "}<span className="font-semibold text-navy">{emails.length} student{emails.length === 1 ? "" : "s"}</span> on this list.
         </p>
       </div>
+
+      <CourseNav base={`/dashboard/cohorts/${cohort.slug}/${course.slug}`} active="students" />
 
       <Banner error={error} ok={ok} />
 

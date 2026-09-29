@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { saveTask } from "@/app/actions/tasks";
-import type { LinkDef } from "@/lib/link-types";
+import { SubmitButton } from "./submit-button";
+import { useKeepValues } from "./use-keep-values";
 import { toLagosInput } from "@/lib/lagos";
 
 export type TaskValues = {
@@ -11,11 +14,12 @@ export type TaskValues = {
 const field = "rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 focus:border-brand focus:outline-none";
 
 export function TaskForm({ ctx, task, hasSubmissions, types }: {
-  ctx: { cohortCourseId: string; cohortSlug: string; courseSlug: string }; task?: TaskValues; hasSubmissions?: boolean; types: LinkDef[];
+  ctx: { cohortCourseId: string; cohortSlug: string; courseSlug: string }; task?: TaskValues; hasSubmissions?: boolean; types: { key: string; label: string }[];
 }) {
   const v: TaskValues = task ?? { kind: "assignment", title: "", instructions: "", max_score: 100, required_links: [], is_open: true, opens_at: null, closes_at: null };
+  const { state, pending, onSubmit } = useKeepValues(saveTask);
   return (
-    <form action={saveTask} className="flex flex-col gap-6 rounded-2xl border border-line bg-white p-6">
+    <form onSubmit={onSubmit} className="flex flex-col gap-6 rounded-2xl border border-line bg-white p-6">
       <input type="hidden" name="cohort_course_id" value={ctx.cohortCourseId} />
       <input type="hidden" name="cohort_slug" value={ctx.cohortSlug} />
       <input type="hidden" name="course_slug" value={ctx.courseSlug} />
@@ -79,8 +83,10 @@ export function TaskForm({ ctx, task, hasSubmissions, types }: {
         </div>
       </fieldset>
 
+      {state?.error && <p role="alert" className="rounded-xl bg-[#fbe9e6] px-4 py-3 text-sm font-medium text-fail">{state.error}</p>}
+
       <div className="flex flex-wrap items-center gap-4">
-        <button className="rounded-xl bg-brand px-6 py-3 font-display font-semibold text-white hover:bg-brand-dark">{v.id ? "Save task" : "Create task"}</button>
+        <SubmitButton pending={pending}>{v.id ? "Save task" : "Create task"}</SubmitButton>
         <Link href={`/dashboard/cohorts/${ctx.cohortSlug}/${ctx.courseSlug}/tasks`} className="font-semibold text-brand">Cancel</Link>
       </div>
     </form>

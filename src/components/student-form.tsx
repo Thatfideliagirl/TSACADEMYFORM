@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { checkLink, submitWork, verifyStudent, type TaskInfo } from "@/app/actions/submit";
+import { checkLink, sendRequest, submitWork, verifyStudent, type TaskInfo } from "@/app/actions/submit";
 import { allTypes, checkLinkType, findType, type LinkDef } from "@/lib/link-types";
 
 type Phase = "idle" | "wrong" | "checking" | "open" | "locked" | "unknown";
@@ -44,6 +44,108 @@ function Back({ onClick, children }: { onClick: () => void; children: React.Reac
       <svg aria-hidden width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 8H3M7.5 3.5 3 8l4.5 4.5" /></svg>
       {children}
     </button>
+  );
+}
+
+
+function RequestPanel({ token, task, onSent }: { token: string; task: TaskInfo; onSent: (r: NonNullable<TaskInfo["request"]>) => void }) {
+  const canReplace = task.sent.length > 0;
+  const [mode, setMode] = useState<"" | "replace_link" | "note">("");
+  const [linkKey, setLinkKey] = useState(task.sent[0]?.key ?? "");
+  const [url, setUrl] = useState("");
+  const [check, setCheck] = useState<Check>({ phase: "idle", message: "" });
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const [pending, start] = useTransition();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const seqNo = useRef(0);
+  const sent = task.sent.find((l) => l.key === linkKey);
+  const def = findType(linkKey, task.custom);
+
+  function onUrl(v: string) {
+    setUrl(v);
+    clearTimeout(timer.current);
+    const mine = ++seqNo.current;
+    if (!v.trim() || !def) return setCheck({ phase: "idle", message: "" });
+    const type = checkLinkType(def, v, allTypes(task.custom));
+    if (!type.ok) return setCheck({ phase: "wrong", message: type.message });
+    if (sent && norm(sent.url) === norm(v)) return setCheck({ phase: "wrong", message: "That is the same link you already sent." });
+    setCheck({ phase: "checking", message: "" });
+    timer.current = setTimeout(async () => {
+      let next: Check;
+      try {
+        const r = await checkLink({ token, taskSlug: task.slug, key: linkKey, url: v });
+        next = !r.typeOk ? { phase: "wrong", message: r.message } : r.status === "locked" ? { phase: "locked", message: r.message }
+          : r.status === "unknown" ? { phase: "unknown", message: r.message } : { phase: "open", message: "" };
+      } catch {
+        next = { phase: "unknown", message: "We could not check this link right now. You can still send it. A moderator will check it." };
+      }
+      if (seqNo.current === mine) setCheck(next);
+    }, 600);
+  }
+
+  const reasonOk = reason.trim().length >= 40;
+  const linkOk = mode !== "replace_link" || ["open", "unknown"].includes(check.phase);
+  const ready = !!mode && reasonOk && linkOk;
+
+  function send(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ready || !mode) return;
+    setError("");
+    start(async () => {
+      const r = await sendRequest({ token, taskSlug: task.slug, kind: mode, linkKey, newUrl: url, reason });
+      if (r.ok) onSent({ kind: mode, status: "pending" });
+      else setError(r.error);
+    });
+  }
+
+  const pick = "rounded-2xl border-[1.5px] px-4 py-3 text-left font-semibold";
+  return (
+    <form onSubmit={send} className={`${card} flex flex-col gap-4`} noValidate>
+      <div>
+        <h3 className="font-display text-lg font-semibold">Need to change something?</h3>
+        <p className="mt-1 text-sm text-muted">You get one request for this task. A moderator will read it.</p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button type="button" disabled={!canReplace} onClick={() => setMode("replace_link")} aria-pressed={mode === "replace_link"}
+          className={`${pick} ${mode === "replace_link" ? "border-brand bg-sky" : "border-line bg-white hover:bg-sky"} disabled:opacity-50`}>
+          Replace a link<span className="block text-sm font-normal text-muted">{canReplace ? "Send a new link in place of one" : "Not available"}</span>
+        </button>
+        <button type="button" onClick={() => setMode("note")} aria-pressed={mode === "note"}
+          className={`${pick} ${mode === "note" ? "border-brand bg-sky" : "border-line bg-white hover:bg-sky"}`}>
+          Leave a note<span className="block text-sm font-normal text-muted">For example, I updated my board</span>
+        </button>
+      </div>
+
+      {mode === "replace_link" && (
+        <div className="flex flex-col gap-2">
+          <label htmlFor="rq-which" className="font-semibold">Which link do you want to replace?</label>
+          <select id="rq-which" value={linkKey} onChange={(e) => { setLinkKey(e.target.value); setUrl(""); setCheck({ phase: "idle", message: "" }); }} className={input}>
+            {task.sent.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
+          </select>
+          <label htmlFor="rq-url" className="mt-1 font-semibold">New {def?.label} link</label>
+          <p className="text-sm text-muted">It must be the same kind of link. {def?.hint}</p>
+          <input id="rq-url" type="url" inputMode="url" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder="https://" value={url} onChange={(e) => onUrl(e.target.value)} className={input} />
+          <ul className="flex flex-wrap gap-2" aria-label="Link checks">
+            <Tick state={check.phase === "idle" ? "idle" : check.phase === "wrong" ? "bad" : "ok"}>Right kind of link</Tick>
+            <Tick state={check.phase === "checking" ? "wait" : check.phase === "open" ? "ok" : check.phase === "locked" ? "bad" : check.phase === "unknown" ? "maybe" : "idle"}>{check.phase === "unknown" ? "Could not verify" : "Opens for anyone"}</Tick>
+          </ul>
+          {check.message && <p role={check.phase === "unknown" ? "status" : "alert"} className={`text-sm ${check.phase === "unknown" ? "text-navy" : "text-fail"}`}>{check.message}</p>}
+        </div>
+      )}
+
+      {mode && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="rq-reason" className="font-semibold">{mode === "note" ? "Your note" : "Why do you need to replace it?"}</label>
+          <textarea id="rq-reason" rows={4} value={reason} onChange={(e) => setReason(e.target.value)} className={input}
+            placeholder={mode === "note" ? "For example: I updated my Trello board. It is the same link." : "Say what was wrong and what you are sending instead."} />
+          <p className={`text-sm ${reasonOk ? "text-pass" : "text-muted"}`} aria-live="polite">{reasonOk ? "Ready to send." : `At least 40 characters (${reason.trim().length} so far).`}</p>
+        </div>
+      )}
+
+      {error && <p role="alert" className="rounded-xl bg-[#fbe9e6] px-4 py-3 text-sm font-medium text-fail">{error}</p>}
+      {mode && <button disabled={!ready || pending} className="rounded-xl bg-brand px-5 py-3 font-display text-base font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40">{pending ? "Sending..." : "Send request"}</button>}
+    </form>
   );
 }
 
@@ -231,6 +333,10 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
   }
 
   if (stage === "already" && current) {
+    const onSent = (r: NonNullable<TaskInfo["request"]>) => {
+      setTasks((p) => p.map((t) => (t.slug === current.slug ? { ...t, request: r } : t)));
+      setCurrent({ ...current, request: r });
+    };
     return (
       <>
         {header}
@@ -239,8 +345,15 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
           <div className={card}>
             <h2 className="font-display text-xl font-semibold">{current.title}</h2>
             <p className="mt-2">You already submitted this on {when(current.submittedAt!)}. Each student gets one submission.</p>
-            <p className="mt-2 text-sm text-muted">If something was wrong with what you sent, contact your cohort lead.</p>
           </div>
+          {current.request ? (
+            <div className={card}>
+              <p className="font-semibold">You have already used your one request for this task.</p>
+              <p className="mt-1 text-sm text-muted">{current.request.status === "pending" ? "A moderator will look at it soon." : "Your moderator has looked at it."}</p>
+            </div>
+          ) : (
+            <RequestPanel token={token} task={current} onSent={onSent} />
+          )}
         </div>
       </>
     );

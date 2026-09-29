@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
 import { signIn, activate } from "@/app/actions/auth";
 import { SubmitButton } from "./submit-button";
 import { inputClass } from "./auth-shell";
+import { useKeepValues } from "./use-keep-values";
 
 function Field({ id, label, type = "text", autoComplete, hint }: { id: string; label: string; type?: string; autoComplete?: string; hint?: string }) {
   return (
@@ -20,28 +20,28 @@ function ErrorLine({ message }: { message?: string }) {
 }
 
 export function SignInForm() {
-  const [state, action] = useActionState(signIn, undefined);
+  const { state, pending, onSubmit } = useKeepValues(signIn);
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <Field id="email" label="Email" type="email" autoComplete="email" />
       <Field id="password" label="Password" type="password" autoComplete="current-password" />
       <ErrorLine message={state?.error} />
-      <SubmitButton>Sign in</SubmitButton>
+      <SubmitButton pending={pending}>Sign in</SubmitButton>
     </form>
   );
 }
 
 export function ActivateForm() {
-  const [state, action] = useActionState(activate, undefined);
+  const { state, pending, onSubmit } = useKeepValues(activate);
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <Field id="full_name" label="Your full name" autoComplete="name" />
       <Field id="email" label="Email your admin added" type="email" autoComplete="email" />
       <Field id="code" label="Invite code" hint="Looks like K7QM-2XPD. Your admin gave it to you." />
       <Field id="password" label="Choose a password" type="password" autoComplete="new-password" hint="At least 8 characters." />
       <Field id="confirm" label="Type the password again" type="password" autoComplete="new-password" />
       <ErrorLine message={state?.error} />
-      <SubmitButton>Create my account</SubmitButton>
+      <SubmitButton pending={pending}>Create my account</SubmitButton>
     </form>
   );
 }
