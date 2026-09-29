@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/staff";
+import { BackLink } from "@/components/back-link";
 import { InviteForm, NewCodeButton } from "@/components/invite-forms";
 
 type One<T> = T | T[] | null;
@@ -23,7 +24,8 @@ export default async function PeoplePage() {
   return (
     <div className="flex flex-col gap-10">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">People</h1>
+        <BackLink href="/dashboard">cohorts</BackLink>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">People</h1>
         <p className="mt-2 max-w-2xl text-muted">Add the email of the person you want to invite. You get a one time code to give them. They use it to create their own password.</p>
       </div>
 

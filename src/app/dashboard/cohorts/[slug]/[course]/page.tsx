@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/staff";
@@ -43,7 +44,7 @@ export default async function CoursePage({ params, searchParams }: {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link href={`/dashboard/cohorts/${cohort.slug}`} className="text-sm font-semibold text-brand">← {cohort.name}</Link>
+        <BackLink href={`/dashboard/cohorts/${cohort.slug}`}>{cohort.name}</BackLink>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">{course.name}</h1>
         <p className="mt-1 text-muted">{cohort.name}</p>
       </div>

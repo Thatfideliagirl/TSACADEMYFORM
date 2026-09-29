@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/staff";
 import { Banner } from "@/components/banner";
@@ -32,7 +33,7 @@ export default async function CohortPage({ params, searchParams }: {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link href="/dashboard" className="text-sm font-semibold text-brand">← All cohorts</Link>
+        <BackLink href="/dashboard">cohorts</BackLink>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-semibold tracking-tight">{cohort.name}</h1>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${cohort.is_open ? "bg-[#e1f2e9] text-pass" : "bg-sky-deep text-muted"}`}>{cohort.is_open ? "Open" : "Closed"}</span>

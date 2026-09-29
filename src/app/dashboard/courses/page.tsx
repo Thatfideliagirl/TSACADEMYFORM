@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/staff";
+import { BackLink } from "@/components/back-link";
 import { Banner } from "@/components/banner";
 import { addCourse, deleteCourse, renameCourse } from "@/app/actions/courses";
 
@@ -10,7 +11,8 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Courses</h1>
+        <BackLink href="/dashboard">cohorts</BackLink>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">Courses</h1>
         <p className="mt-2 max-w-2xl text-muted">The list of courses TS Academy teaches. Choose the courses of each cohort from this list. Renaming a course does not change any form links.</p>
       </div>
 
