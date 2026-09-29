@@ -124,6 +124,8 @@ export default async function SubmissionsPage({ params, searchParams }: { params
             const links = r.links as Record<string, string>;
             const reviewed = (r.reviewed ?? {}) as Record<string, boolean>;
             const unverified = (r.unverified_links ?? []) as string[];
+            const confirmed = (k: string) => !!reviewed[`opens:${k}`];
+            const stillOpen = unverified.filter((k) => !confirmed(k));
             const req = reqBy.get(r.id);
             const marked = r.score !== null;
             return (
@@ -137,7 +139,9 @@ export default async function SubmissionsPage({ params, searchParams }: { params
                     </span>
                     <span className="flex flex-wrap items-center gap-2">
                       {r.changed_after_grading && <span className="rounded-full bg-[#fbe9e6] px-2.5 py-0.5 text-xs font-semibold text-fail">Changed after marking</span>}
-                      {unverified.length > 0 && <span className="rounded-full bg-sky-deep px-2.5 py-0.5 text-xs font-semibold">Could not verify</span>}
+                      {stillOpen.length > 0
+                        ? <span className="rounded-full bg-[#fbe9e6] px-2.5 py-0.5 text-xs font-semibold text-fail">{stillOpen.length} link{stillOpen.length === 1 ? "" : "s"} not verified</span>
+                        : <span className="rounded-full bg-[#e1f2e9] px-2.5 py-0.5 text-xs font-semibold text-pass">{unverified.length > 0 ? "Links checked" : "Links verified"}</span>}
                       {req?.status === "pending" && <span className="rounded-full bg-[#fbe9e6] px-2.5 py-0.5 text-xs font-semibold text-fail">Request waiting</span>}
                       <span className={`rounded-full px-3 py-1 text-sm font-semibold ${marked ? "bg-[#e1f2e9] text-pass" : "bg-sky-deep"}`}>{marked ? `${r.score} / ${tk?.max_score}` : "To mark"}</span>
                     </span>
@@ -155,10 +159,20 @@ export default async function SubmissionsPage({ params, searchParams }: { params
                             <span className="min-w-0">
                               <span className="block font-semibold">{labelOf(key)} <span className="font-normal text-muted">reviewed</span></span>
                               <span className="block truncate text-sm text-muted">{url}</span>
-                              {unverified.includes(key) && <span className="text-xs font-semibold text-navy">Could not verify that this opens for anyone. Check it.</span>}
+                              {unverified.includes(key)
+                                ? (confirmed(key)
+                                  ? <span className="text-xs font-semibold text-pass">You checked it. It opens for anyone.</span>
+                                  : <span className="text-xs font-semibold text-fail">Could not verify that this opens for anyone. Check it.</span>)
+                                : <span className="text-xs font-semibold text-pass">Verified. It opens for anyone.</span>}
                             </span>
                           </label>
                           <a href={url} target="_blank" rel="noopener noreferrer" className="rounded-lg border-[1.5px] border-brand px-4 py-1.5 text-sm font-semibold text-brand hover:bg-sky">Open</a>
+                          {unverified.includes(key) && (
+                            <label className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-[1.5px] px-3 py-2 text-sm font-semibold ${confirmed(key) ? "border-pass bg-[#e1f2e9] text-pass" : "border-fail bg-[#fbe9e6] text-fail"}`}>
+                              <input type="checkbox" name={`opens_${key}`} defaultChecked={confirmed(key)} className="h-5 w-5 flex-none accent-brand" />
+                              I opened it and it works for anyone
+                            </label>
+                          )}
                         </li>
                       ))}
                     </ul>
