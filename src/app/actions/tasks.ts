@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/lib/staff";
 import { slugify } from "@/lib/slug";
 import { fromLagosInput } from "@/lib/lagos";
-import { isLinkTypeKey } from "@/lib/link-types";
+import { isBuiltInKey } from "@/lib/link-types";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const tasksPath = (f: FormData) => `/dashboard/cohorts/${str(f, "cohort_slug")}/${str(f, "course_slug")}/tasks`;
@@ -21,7 +21,9 @@ export async function saveTask(formData: FormData) {
   const title = str(formData, "title");
   const kind = str(formData, "kind") === "capstone" ? "capstone" : "assignment";
   const maxScore = Number(str(formData, "max_score"));
-  const links = formData.getAll("link").map(String).filter(isLinkTypeKey);
+  const { data: customRows } = await supabase.from("link_types").select("key");
+  const validKeys = new Set([...(customRows ?? []).map((r) => r.key)]);
+  const links = formData.getAll("link").map(String).filter((k) => isBuiltInKey(k) || validKeys.has(k));
   const opensAt = fromLagosInput(str(formData, "opens_at"));
   const closesAt = fromLagosInput(str(formData, "closes_at"));
 

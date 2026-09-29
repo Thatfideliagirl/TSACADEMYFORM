@@ -1,51 +1,108 @@
 // The one place that says which kinds of link students can be asked for.
-// To add a new kind, add a line here. Everything else (task form, student form, checks) follows.
+// Built in kinds live here. Staff can also add their own kinds from the Tasks page (stored in the database).
+// Either way, every kind is checked the same way: by the address pattern, or by the website it must come from.
 
-export type LinkTypeKey = "drive" | "gdoc" | "gsheet" | "gslides" | "notion" | "canva" | "trello";
+export type LinkDef = { key: string; label: string; hint: string; pattern?: RegExp; domains?: string[]; custom?: boolean };
+export type CustomLinkType = { key: string; label: string; domains: string[]; hint: string };
 
-export const LINK_TYPES: Record<LinkTypeKey, { label: string; hint: string; pattern: RegExp }> = {
-  drive: {
-    label: "Google Drive folder",
+export const BUILT_IN_TYPES: LinkDef[] = [
+  {
+    key: "drive", label: "Google Drive folder",
     hint: "Open the folder in Google Drive, click Share, set General access to Anyone with the link, then copy the link.",
     pattern: /^https?:\/\/drive\.google\.com\/(drive\/(u\/\d+\/)?folders\/|open\?id=)[\w-]+/i,
   },
-  gdoc: {
-    label: "Google Doc",
+  {
+    key: "gdoc", label: "Google Doc",
     hint: "In your Doc, click Share, set General access to Anyone with the link, then copy the link.",
     pattern: /^https?:\/\/docs\.google\.com\/document\/d\/[\w-]+/i,
   },
-  gsheet: {
-    label: "Google Sheet",
+  {
+    key: "gsheet", label: "Google Sheet",
     hint: "In your Sheet, click Share, set General access to Anyone with the link, then copy the link.",
     pattern: /^https?:\/\/docs\.google\.com\/spreadsheets\/d\/[\w-]+/i,
   },
-  gslides: {
-    label: "Google Slides",
+  {
+    key: "gslides", label: "Google Slides",
     hint: "In your presentation, click Share, set General access to Anyone with the link, then copy the link.",
     pattern: /^https?:\/\/docs\.google\.com\/presentation\/d\/[\w-]+/i,
   },
-  notion: {
-    label: "Notion page",
+  {
+    key: "notion", label: "Notion page",
     hint: "In Notion, click Share, then Publish, turn on Publish to web, and copy the public link.",
     pattern: /^https?:\/\/([\w-]+\.)?(notion\.so|notion\.site)\/\S+/i,
   },
-  canva: {
-    label: "Canva design",
+  {
+    key: "canva", label: "Canva design",
     hint: "In Canva, click Share, set access to Anyone with the link, then copy the link.",
     pattern: /^https?:\/\/(www\.)?(canva\.com\/design\/\S+|canva\.link\/\S+)/i,
   },
-  trello: {
-    label: "Trello board",
+  {
+    key: "trello", label: "Trello board",
     hint: "Open your board, click the three dots menu in the top right corner, click Visibility, choose Public, then confirm. Copy the link from your browser's address bar.",
     pattern: /^https?:\/\/(www\.)?trello\.com\/b\/\S+/i,
   },
-};
+  {
+    key: "gamma", label: "Gamma presentation", domains: ["gamma.app"],
+    hint: "In Gamma, click Share, set access to Anyone with the link can view, then copy the link.",
+  },
+  {
+    key: "figma", label: "Figma design", domains: ["figma.com"],
+    hint: "In Figma, click Share, set link access to Anyone with the link can view, then copy the link.",
+  },
+  {
+    key: "loom", label: "Loom video", domains: ["loom.com"],
+    hint: "In Loom, open the video, click Share, set access to Anyone with the link, then copy the link.",
+  },
+  {
+    key: "github", label: "GitHub repository", domains: ["github.com"],
+    hint: "Open the repository, make sure it is set to Public, then copy the address from your browser's address bar.",
+  },
+  {
+    key: "youtube", label: "YouTube video", domains: ["youtube.com", "youtu.be"],
+    hint: "Upload the video as Public or Unlisted, then copy the link.",
+  },
+  {
+    key: "miro", label: "Miro board", domains: ["miro.com"],
+    hint: "In Miro, click Share, set access to Anyone with the link can view, then copy the link.",
+  },
+];
 
-export const LINK_TYPE_KEYS = Object.keys(LINK_TYPES) as LinkTypeKey[];
+export const DEFAULT_CUSTOM_HINT = "Make sure the link opens for anyone without signing in, then copy it.";
 
-export const isLinkTypeKey = (k: string): k is LinkTypeKey => k in LINK_TYPES;
+// Built in kinds plus any the staff added.
+export function allTypes(custom: CustomLinkType[] = []): LinkDef[] {
+  return [...BUILT_IN_TYPES, ...custom.map((c) => ({ ...c, hint: c.hint || DEFAULT_CUSTOM_HINT, custom: true }))];
+}
 
-// Links we recognise but that are the wrong kind of thing for a box. Used to say what was pasted.
+export const isBuiltInKey = (k: string) => BUILT_IN_TYPES.some((t) => t.key === k);
+export const findType = (key: string, custom: CustomLinkType[] = []) => allTypes(custom).find((t) => t.key === key);
+
+export function hostOf(url: string): string | null {
+  try {
+    return new URL(url.trim()).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+// Turns whatever staff typed ("https://www.gamma.app/x", "gamma.app, gamma.site") into clean website names.
+export function parseWebsites(input: string): string[] {
+  const out = new Set<string>();
+  for (const part of input.split(/[\s,;]+/)) {
+    const host = part.trim().toLowerCase().replace(/^https?:\/\//, "").split(/[/?#]/)[0].replace(/^www\./, "");
+    if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) out.add(host);
+  }
+  return [...out];
+}
+
+export function matchesType(def: LinkDef, url: string): boolean {
+  const u = url.trim();
+  if (def.pattern) return def.pattern.test(u);
+  const host = hostOf(u);
+  return !!host && !!def.domains?.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+// Links we recognise but that are the wrong kind of thing for a box.
 const OTHER_KINDS: { label: string; pattern: RegExp }[] = [
   { label: "Google Drive file", pattern: /^https?:\/\/drive\.google\.com\/file\//i },
   { label: "Google Form", pattern: /^https?:\/\/(docs\.google\.com\/forms|forms\.gle)\// },
@@ -55,25 +112,18 @@ const OTHER_KINDS: { label: string; pattern: RegExp }[] = [
 export type TypeCheck = { ok: true } | { ok: false; message: string };
 
 // Is this the right kind of link for this box? The message says what it is and what is needed.
-export function checkLinkType(key: LinkTypeKey, raw: string): TypeCheck {
+export function checkLinkType(def: LinkDef, raw: string, all: LinkDef[] = BUILT_IN_TYPES): TypeCheck {
   const url = raw.trim();
-  const wanted = LINK_TYPES[key];
   if (!/^https?:\/\/\S+\.\S+/i.test(url)) {
     return { ok: false, message: "That does not look like a link. It should start with https://" };
   }
-  if (wanted.pattern.test(url)) return { ok: true };
+  if (matchesType(def, url)) return { ok: true };
 
-  let found: string | null = null;
-  for (const k of LINK_TYPE_KEYS) if (LINK_TYPES[k].pattern.test(url)) { found = LINK_TYPES[k].label; break; }
-  if (!found) for (const o of OTHER_KINDS) if (o.pattern.test(url)) { found = o.label; break; }
-
-  if (key === "drive" && found === "Google Drive file") {
+  const found = all.find((t) => matchesType(t, url))?.label ?? OTHER_KINDS.find((o) => o.pattern.test(url))?.label ?? null;
+  if (def.key === "drive" && found === "Google Drive file") {
     return { ok: false, message: "This is a single file, not a folder. Paste the link to the whole folder." };
   }
-  return {
-    ok: false,
-    message: found
-      ? `This is a ${found} link. This box only takes your ${wanted.label} link.`
-      : `This is not a ${wanted.label} link. ${wanted.hint}`,
-  };
+  if (found) return { ok: false, message: `This is a ${found} link. This box only takes your ${def.label} link.` };
+  const from = def.domains ? ` It should come from ${def.domains.join(" or ")}.` : "";
+  return { ok: false, message: `This is not a ${def.label} link.${from} ${def.hint}` };
 }

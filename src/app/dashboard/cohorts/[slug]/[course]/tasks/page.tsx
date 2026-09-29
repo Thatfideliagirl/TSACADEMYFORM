@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getCourseContext } from "@/lib/course-context";
 import { siteOrigin } from "@/lib/origin";
 import { showLagos } from "@/lib/lagos";
-import { LINK_TYPES, isLinkTypeKey } from "@/lib/link-types";
+import { allTypes } from "@/lib/link-types";
+import { createLinkType, deleteLinkType } from "@/app/actions/link-types";
 import { Banner } from "@/components/banner";
 import { CopyButton } from "@/components/copy-button";
 
@@ -13,6 +14,9 @@ export default async function TasksPage({ params, searchParams }: {
   const { error, ok } = await searchParams;
   const { supabase, cohort, course, cc } = await getCourseContext(slug, courseSlug);
   const origin = await siteOrigin();
+  const { data: customRows } = await supabase.from("link_types").select("key, label, domains, hint").order("label");
+  const types = allTypes(customRows ?? []);
+  const labelOf = (k: string) => types.find((t) => t.key === k)?.label ?? k;
 
   const { data: tasks } = await supabase
     .from("tasks").select("id, kind, title, slug, max_score, required_links, is_open, opens_at, closes_at")
@@ -61,7 +65,7 @@ export default async function TasksPage({ params, searchParams }: {
                   <Link href={`${base}/tasks/${t.slug}`} className="rounded-lg border-[1.5px] border-line px-4 py-2 text-sm font-semibold text-brand hover:bg-sky">Edit</Link>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {(t.required_links as string[]).filter(isLinkTypeKey).map((k) => <span key={k} className="rounded-full bg-sky px-2.5 py-0.5 text-xs font-semibold text-brand">{LINK_TYPES[k].label}</span>)}
+                  {(t.required_links as string[]).map((k) => <span key={k} className="rounded-full bg-sky px-2.5 py-0.5 text-xs font-semibold text-brand">{labelOf(k)}</span>)}
                 </div>
                 <div className="mt-4 flex items-center gap-2 rounded-xl bg-sky px-3 py-2">
                   <code className="min-w-0 flex-1 truncate text-sm">{link}</code>
@@ -72,6 +76,46 @@ export default async function TasksPage({ params, searchParams }: {
           })}
         </ul>
       )}
+
+      <section className="rounded-2xl border border-line bg-white p-6">
+        <h2 className="font-display text-xl font-semibold">Other kinds of link</h2>
+        <p className="mt-1 text-sm text-muted">
+          Google Docs, Sheets, Slides, Drive, Notion, Canva, Trello, Gamma, Figma, Loom, GitHub, YouTube and Miro are ready to tick.
+          Need something else? Add it here. Students will be told if they paste a link from the wrong website.
+        </p>
+        {!!customRows?.length && (
+          <ul className="mt-4 flex flex-col gap-2">
+            {customRows.map((c) => (
+              <li key={c.key} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line px-4 py-2.5">
+                <span><span className="font-semibold">{c.label}</span><span className="block text-sm text-muted">{(c.domains as string[]).join(", ")}</span></span>
+                <form action={deleteLinkType}>
+                  <input type="hidden" name="key" value={c.key} />
+                  <input type="hidden" name="cohort_slug" value={cohort.slug} />
+                  <input type="hidden" name="course_slug" value={course.slug} />
+                  <button className="text-sm font-semibold text-fail">Delete</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form action={createLinkType} className="mt-5 grid gap-3 sm:grid-cols-2">
+          <input type="hidden" name="cohort_slug" value={cohort.slug} />
+          <input type="hidden" name="course_slug" value={course.slug} />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="lt-label" className="text-sm font-semibold">Name of the kind of link</label>
+            <input id="lt-label" name="label" required placeholder="Behance portfolio" className="rounded-xl border-[1.5px] border-line px-3 py-2.5 focus:border-brand focus:outline-none" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="lt-site" className="text-sm font-semibold">Website it comes from</label>
+            <input id="lt-site" name="website" required placeholder="behance.net" className="rounded-xl border-[1.5px] border-line px-3 py-2.5 focus:border-brand focus:outline-none" />
+          </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label htmlFor="lt-hint" className="text-sm font-semibold">How students make the link public <span className="font-normal text-muted">(optional)</span></label>
+            <input id="lt-hint" name="hint" placeholder="Publish the project, then copy the link from your browser." className="rounded-xl border-[1.5px] border-line px-3 py-2.5 focus:border-brand focus:outline-none" />
+          </div>
+          <button className="self-start rounded-xl bg-brand px-5 py-2.5 font-display font-semibold text-white hover:bg-brand-dark sm:col-span-2">Add kind of link</button>
+        </form>
+      </section>
     </div>
   );
 }

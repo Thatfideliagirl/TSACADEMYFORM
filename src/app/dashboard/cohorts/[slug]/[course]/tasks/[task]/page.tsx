@@ -4,6 +4,7 @@ import { getCourseContext } from "@/lib/course-context";
 import { Banner } from "@/components/banner";
 import { DangerZone } from "@/components/danger-zone";
 import { TaskForm } from "@/components/task-form";
+import { allTypes } from "@/lib/link-types";
 import { deleteTask } from "@/app/actions/tasks";
 
 export default async function EditTaskPage({ params, searchParams }: {
@@ -17,6 +18,7 @@ export default async function EditTaskPage({ params, searchParams }: {
     .from("tasks").select("id, slug, kind, title, instructions, max_score, required_links, is_open, opens_at, closes_at")
     .eq("slug", taskSlug).eq("cohort_course_id", cc.id).maybeSingle();
   if (!task) notFound();
+  const { data: custom } = await supabase.from("link_types").select("key, label, domains, hint").order("label");
   const { count } = await supabase.from("submissions").select("id", { count: "exact", head: true }).eq("task_id", task.id);
 
   return (
@@ -27,7 +29,7 @@ export default async function EditTaskPage({ params, searchParams }: {
         <p className="mt-1 text-muted">{course.name}, {cohort.name}</p>
       </div>
       <Banner error={error} />
-      <TaskForm ctx={{ cohortCourseId: cc.id, cohortSlug: cohort.slug, courseSlug: course.slug }} task={task} hasSubmissions={(count ?? 0) > 0} />
+      <TaskForm ctx={{ cohortCourseId: cc.id, cohortSlug: cohort.slug, courseSlug: course.slug }} task={task} hasSubmissions={(count ?? 0) > 0} types={allTypes(custom ?? [])} />
       <DangerZone title="Delete this task" confirmWord={task.title} action={deleteTask} buttonLabel="Delete task for good"
         warning={`This removes the task and every submission for it${count ? ` (${count} so far)` : ""}. It cannot be undone.`}>
         <input type="hidden" name="task_id" value={task.id} />
