@@ -25,6 +25,11 @@ export default async function ResubmissionsPage({ params }: { params: Promise<{ 
   const types = allTypes(customRows ?? []);
   const labelOf = (k: string) => types.find((t) => t.key === k)?.label ?? k;
 
+  // Who ticked "I have emailed the student". Separate so the page works before SQL file 0007 is run.
+  const { data: mailed } = await supabase.from("submissions")
+    .select("id, resubmit_emailed_at, emailer:profiles!submissions_resubmit_emailed_by_fkey(full_name)").in("id", (rows ?? []).map((r) => r.id)).not("resubmit_emailed_at", "is", null);
+  const mailedBy = new Map((mailed ?? []).map((m) => [m.id, { at: m.resubmit_emailed_at as string, who: first(m.emailer as One<{ full_name: string }>)?.full_name ?? "a moderator" }]));
+
   const all = rows ?? [];
   const waiting = all.filter((r) => r.resubmit_asked);
   const back = all.filter((r) => !r.resubmit_asked && r.resubmitted_at && (!r.graded_at || r.graded_at < r.resubmitted_at));
@@ -45,6 +50,11 @@ export default async function ResubmissionsPage({ params }: { params: Promise<{ 
             ? <span className="rounded-full bg-brand px-3 py-1 text-sm font-semibold text-white">Waiting for resubmission</span>
             : <span className="rounded-full bg-[#e1f2e9] px-3 py-1 text-sm font-semibold text-pass">Resubmitted, ready to mark</span>}
         </div>
+        {kind === "waiting" && (
+          <p className={`text-sm font-semibold ${mailedBy.has(r.id) ? "text-brand" : "text-muted"}`}>
+            {mailedBy.has(r.id) ? `Feedback sent: emailed by ${mailedBy.get(r.id)!.who} on ${showLagos(mailedBy.get(r.id)!.at)}` : "Feedback not sent yet"}
+          </p>
+        )}
         {kind === "waiting" && <p className="text-sm">To fix: <span className="font-semibold">{((r.resubmit_links ?? []) as string[]).map(labelOf).join(", ")}</span></p>}
         {r.resubmit_feedback && <p className="whitespace-pre-line rounded-xl bg-sky px-4 py-3 text-sm">{r.resubmit_feedback}</p>}
         <Link href={filter} className="self-start rounded-lg border-[1.5px] border-brand px-4 py-1.5 text-sm font-semibold text-brand hover:bg-sky">
@@ -62,6 +72,13 @@ export default async function ResubmissionsPage({ params }: { params: Promise<{ 
         <p className="mt-1 text-muted">{course.name}, {cohort.name}</p>
       </div>
       <CourseNav base={base} active="resubmissions" resubmit={waiting.length} />
+
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-4">
+        <span className="text-sm font-semibold">Download this list</span>
+        <a href={`${base}/export?resubmissions=1&format=xlsx`} className="rounded-lg border-[1.5px] border-brand px-3 py-2 text-sm font-semibold text-brand hover:bg-sky">Excel</a>
+        <a href={`${base}/export?resubmissions=1&format=csv`} className="rounded-lg border-[1.5px] border-line px-3 py-2 text-sm font-semibold text-brand hover:bg-sky">CSV</a>
+        <span className="text-sm text-muted">Names, emails, tasks, your feedback and whether it was emailed.</span>
+      </div>
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-xl font-semibold">Waiting for the student ({waiting.length})</h2>

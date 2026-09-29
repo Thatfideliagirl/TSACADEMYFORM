@@ -81,6 +81,18 @@ export async function askResubmit(formData: FormData) {
     score: null, graded_by: null, graded_at: null, changed_after_grading: false,
   }).eq("id", sub!.id);
   if (error) back(to, "error", "Could not save. Please try again.");
+
+  // The "I have emailed the student" tick. It lives in its own step so the rest still saves if the newest database update is missing.
+  const sent = formData.get("emailed") === "on";
+  const { data: cur, error: readError } = await supabase.from("submissions").select("resubmit_emailed_at").eq("id", sub!.id).maybeSingle();
+  if (readError) {
+    revalidatePath("/dashboard", "layout");
+    back(to, sent ? "error" : "ok", sent ? "Saved, but the emailed tick needs the newest database update (SQL file 0007)." : "Resubmission asked. The student can now send new links for the ones you switched on.");
+  }
+  const already = sub!.resubmit_asked ? cur?.resubmit_emailed_at ?? null : null;
+  await supabase.from("submissions").update(
+    sent ? { resubmit_emailed_at: already ?? new Date().toISOString(), resubmit_emailed_by: already ? undefined : profile.id } : { resubmit_emailed_at: null, resubmit_emailed_by: null },
+  ).eq("id", sub!.id);
   revalidatePath("/dashboard", "layout");
   back(to, "ok", "Resubmission asked. The student can now send new links for the ones you switched on.");
 }
