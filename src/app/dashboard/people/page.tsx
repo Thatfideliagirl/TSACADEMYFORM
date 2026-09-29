@@ -24,7 +24,7 @@ export default async function PeoplePage() {
   return (
     <div className="flex flex-col gap-10">
       <div>
-        <BackLink href="/dashboard">cohorts</BackLink>
+        <BackLink href="/dashboard">overview</BackLink>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">People</h1>
         <p className="mt-2 max-w-2xl text-muted">Add the email of the person you want to invite. You get a one time code to give them. They use it to create their own password.</p>
       </div>

@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
   if (!out.secretKeySet) return NextResponse.json(out);
   try {
     const db = createAdminClient();
+    const started = Date.now();
     const { count, error } = await db.from("cohort_courses").select("id", { count: "exact", head: true });
+    out.databaseTripMs = Date.now() - started;
+    out.serverRegion = process.env.VERCEL_REGION ?? "local";
     out.secretKeyWorks = !error;
     if (error) out.problem = category(error);
     else out.courseFormsInDatabase = count;

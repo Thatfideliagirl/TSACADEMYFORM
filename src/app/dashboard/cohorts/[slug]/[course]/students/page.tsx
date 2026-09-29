@@ -4,7 +4,9 @@ import { getCourseContext } from "@/lib/course-context";
 import { Banner } from "@/components/banner";
 import { CourseNav } from "@/components/course-nav";
 import { RosterUploader } from "@/components/roster-uploader";
-import { addStudent, deleteStudent, updateStudent } from "@/app/actions/students";
+import { BulkSelect } from "@/components/bulk-select";
+import { DangerZone } from "@/components/danger-zone";
+import { addStudent, deleteAllStudents, deleteStudent, deleteStudents, updateStudent } from "@/app/actions/students";
 
 const input = "min-w-0 rounded-xl border-[1.5px] border-line bg-white px-3 py-2 focus:border-brand focus:outline-none";
 
@@ -78,31 +80,43 @@ export default async function StudentsPage({ params, searchParams }: {
             {term ? "No student matches that search." : "No students yet. Upload a list above, or add one."}
           </p>
         ) : (
+          <>
+          <form id="bulk-delete" action={deleteStudents}>{hiddenFields}</form>
+          <BulkSelect formId="bulk-delete" total={students.length} />
           <ul className="flex flex-col gap-2">
             {students.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-end gap-2 rounded-xl border border-line bg-white p-3">
-                <form action={updateStudent} className="flex min-w-0 flex-1 flex-wrap items-end gap-2">
-                  {hiddenFields}<input type="hidden" name="id" value={s.id} />
-                  <div className="flex min-w-40 flex-1 flex-col gap-1">
+              <li key={s.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 rounded-xl border border-line bg-white p-3">
+                <label className="flex h-11 items-center">
+                  <input type="checkbox" name="ids" value={s.id} form="bulk-delete" aria-label={`Select ${s.full_name}`} className="h-5 w-5 accent-brand" />
+                </label>
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                  <form action={updateStudent} className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                    {hiddenFields}<input type="hidden" name="id" value={s.id} />
                     <label htmlFor={`n-${s.id}`} className="sr-only">Full name</label>
-                    <input id={`n-${s.id}`} name="full_name" defaultValue={s.full_name} required className={input} />
-                  </div>
-                  <div className="flex min-w-40 flex-1 flex-col gap-1">
+                    <input id={`n-${s.id}`} name="full_name" defaultValue={s.full_name} required className={`${input} sm:flex-1`} />
                     <label htmlFor={`e-${s.id}`} className="sr-only">Email</label>
-                    <input id={`e-${s.id}`} name="email" type="email" defaultValue={s.email} required className={input} />
-                  </div>
-                  <button className="rounded-lg border-[1.5px] border-line px-3 py-2 text-sm font-semibold text-brand hover:bg-sky">Save</button>
-                </form>
-                <form action={deleteStudent}>
-                  {hiddenFields}<input type="hidden" name="id" value={s.id} />
-                  <button className="rounded-lg border-[1.5px] border-[#e8b9b2] px-3 py-2 text-sm font-semibold text-fail hover:bg-[#fbe9e6]">Remove</button>
-                </form>
+                    <input id={`e-${s.id}`} name="email" type="email" defaultValue={s.email} required className={`${input} sm:flex-1`} />
+                    <button className="self-start rounded-lg border-[1.5px] border-line px-4 py-2 text-sm font-semibold text-brand hover:bg-sky sm:self-auto">Save</button>
+                  </form>
+                  <form action={deleteStudent} className="self-start sm:self-auto">
+                    {hiddenFields}<input type="hidden" name="id" value={s.id} />
+                    <button className="rounded-lg border-[1.5px] border-[#e8b9b2] px-4 py-2 text-sm font-semibold text-fail hover:bg-[#fbe9e6]">Remove</button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>
+          </>
         )}
         {emails.length > 300 && !term && <p className="text-sm text-muted">Showing the first 300 students. Use the search to find others.</p>}
       </section>
+
+      {emails.length > 0 && (
+        <DangerZone title="Remove everyone from this list" confirmWord="remove everyone" action={deleteAllStudents} buttonLabel="Empty the list"
+          warning={`This removes all ${emails.length} students and everything they submitted. Use it when you want to upload a fresh list. It cannot be undone.`}>
+          {hiddenFields}
+        </DangerZone>
+      )}
     </div>
   );
 }

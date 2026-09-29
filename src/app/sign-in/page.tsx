@@ -9,7 +9,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   if (await getStaff()) redirect("/dashboard");
   const { activated } = await searchParams;
   return (
-    <AuthShell eyebrow="TS Academy Submit" title="Welcome back" intro="Sign in to manage cohorts, read submissions and mark work.">
+    <AuthShell eyebrow="Staff sign in" title="Welcome back" intro="Sign in to manage cohorts, read submissions and mark work.">
       <AuthTabs active="sign-in" />
       {activated && (
         <p role="status" className="mb-5 rounded-xl bg-[#e1f2e9] px-4 py-3 text-sm font-medium text-pass">

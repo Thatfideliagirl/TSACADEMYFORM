@@ -14,7 +14,7 @@ export type TaskValues = {
 const field = "rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 focus:border-brand focus:outline-none";
 
 export function TaskForm({ ctx, task, hasSubmissions, types }: {
-  ctx: { cohortCourseId: string; cohortSlug: string; courseSlug: string }; task?: TaskValues; hasSubmissions?: boolean; types: { key: string; label: string }[];
+  ctx: { cohortCourseId: string; cohortSlug: string; courseSlug: string; formSlug?: string }; task?: TaskValues; hasSubmissions?: boolean; types: { key: string; label: string }[];
 }) {
   const v: TaskValues = task ?? { kind: "assignment", title: "", instructions: "", max_score: 100, required_links: [], is_open: true, opens_at: null, closes_at: null };
   const { state, pending, onSubmit } = useKeepValues(saveTask);
@@ -38,6 +38,17 @@ export function TaskForm({ ctx, task, hasSubmissions, types }: {
           </select>
         </div>
       </div>
+
+      {v.id && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="slug_new" className="font-semibold">Link address of this task</label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted">/submit/{ctx.formSlug}/</span>
+            <input id="slug_new" name="slug_new" defaultValue={v.slug} className={`${field} min-w-0 flex-1`} />
+          </div>
+          <p className="text-sm text-muted">Letters, numbers and dashes only. If you change it, the old direct link for this task stops working.</p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="instructions" className="font-semibold">Instructions students will see</label>

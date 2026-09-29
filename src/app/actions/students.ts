@@ -76,3 +76,28 @@ export async function deleteStudent(formData: FormData) {
   revalidatePath("/dashboard", "layout");
   back(path, "ok", "Student removed. Anything they submitted was removed with them.");
 }
+
+// Removes many students at once. The page asks "are you sure" first. Anything they submitted goes with them.
+export async function deleteStudents(formData: FormData) {
+  const { supabase } = await requireStaff();
+  const path = listPath(formData);
+  const ids = formData.getAll("ids").map(String).filter(Boolean);
+  if (!ids.length) back(path, "error", "Tick the students you want to remove first.");
+  for (let i = 0; i < ids.length; i += 100) {
+    const { error } = await supabase.from("students").delete().in("id", ids.slice(i, i + 100));
+    if (error) back(path, "error", "Could not remove all of them. Some may be gone already, so check the list.");
+  }
+  revalidatePath("/dashboard", "layout");
+  back(path, "ok", `${ids.length} student${ids.length === 1 ? "" : "s"} removed. Anything they submitted was removed with them.`);
+}
+
+// Empties the whole list. Needs the words typed in, so it cannot happen by accident.
+export async function deleteAllStudents(formData: FormData) {
+  const { supabase } = await requireStaff();
+  const path = listPath(formData);
+  if (str(formData, "confirm").toLowerCase() !== "remove everyone") back(path, "error", "You did not type the words, so nobody was removed.");
+  const { error } = await supabase.from("students").delete().eq("cohort_course_id", str(formData, "cohort_course_id"));
+  if (error) back(path, "error", "Could not empty the list.");
+  revalidatePath("/dashboard", "layout");
+  back(path, "ok", "The student list is now empty.");
+}

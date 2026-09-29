@@ -17,15 +17,15 @@ export default async function CohortPage({ params, searchParams }: {
   const { supabase, profile } = await requireStaff();
   const isAdmin = profile.role === "admin";
 
-  const { data: cohort } = await supabase.from("cohorts").select("id, name, slug, is_open").eq("slug", slug).maybeSingle();
+  // The cohort, its courses and their moderators come back in one trip.
+  const [{ data: cohort }, { data: allCourses }] = await Promise.all([
+    supabase.from("cohorts")
+      .select("id, name, slug, is_open, cohort_courses(id, form_name, is_open, created_at, courses(id, name, slug), cohort_course_moderators(user_id))")
+      .eq("slug", slug).maybeSingle(),
+    isAdmin ? supabase.from("courses").select("id, name").order("name") : Promise.resolve({ data: [] }),
+  ]);
   if (!cohort) notFound();
-
-  const { data: rows } = await supabase
-    .from("cohort_courses")
-    .select("id, form_name, is_open, courses(id, name, slug), cohort_course_moderators(user_id)")
-    .eq("cohort_id", cohort.id)
-    .order("created_at");
-  const { data: allCourses } = isAdmin ? await supabase.from("courses").select("id, name").order("name") : { data: [] };
+  const rows = [...(cohort.cohort_courses ?? [])].sort((x, y) => String(x.created_at).localeCompare(String(y.created_at)));
 
   const used = new Set((rows ?? []).map((r) => first(r.courses)?.id));
   const freeCourses = (allCourses ?? []).filter((c) => !used.has(c.id));
@@ -33,7 +33,7 @@ export default async function CohortPage({ params, searchParams }: {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <BackLink href="/dashboard">cohorts</BackLink>
+        <BackLink href="/dashboard/cohorts">cohorts</BackLink>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-semibold tracking-tight">{cohort.name}</h1>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${cohort.is_open ? "bg-[#e1f2e9] text-pass" : "bg-sky-deep text-muted"}`}>{cohort.is_open ? "Open" : "Closed"}</span>

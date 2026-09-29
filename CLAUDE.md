@@ -39,6 +39,12 @@ Coco changed the design after the first draft. Where the sections below say some
 18. Exports (Excel or CSV) are per course: one task, all assignments, the capstone, or everything in the course. A separate export lists students who have not submitted a task.
 19. Forms keep what the person typed when the server sends back an error (src/components/use-keep-values.ts). Use it for every new form that uses a server action with an error message.
 20. Testing. The whole flow was tested end to end against a local copy of the database and login (real security rules, real Postgres). See the test notes in the session history. /api/health gives a yes or no self check of the live site.
+21. Overview. /dashboard is the Overview page for both roles (admins see everything, moderators see their own courses). /dashboard/cohorts lists cohorts and, for admins, creates them. Menu: Overview, Cohorts, plus Courses and People for admins. Numbers come from the course_counts() database function (SQL file 0004).
+22. Course overview numbers: Students, Tasks, Submitted, Not yet submitted, Students who have submitted, Marked, Waiting to be marked, Pending requests. Toggle All, Assignments, Capstone.
+23. Form addresses: new forms get /submit/<course>-<cohort>. Admins can change the end of it on the course page. Task addresses are short (/submit/<form>/<task>) and unique per course, and staff can change them.
+24. Speed: who is signed in is read from the saved sign in, not asked from the login service on every click. Pages load in as few database trips as possible and show a loading screen at once. Check /api/health for the trip time and the server region.
+25. Phones: every page was checked at phone width for fit and by eye. Keep new pages phone friendly, and never put loose CSS outside a Tailwind layer, because it overrides the utility classes.
+26. Students page has select all, tick boxes and bulk delete, and a typed confirmation to empty the whole list.
 
 ## The problem
 
