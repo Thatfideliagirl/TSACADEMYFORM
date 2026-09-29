@@ -36,13 +36,15 @@ export default async function CoursePage({ params, searchParams }: {
 
   const tiles: [string, number, string, string][] = [
     ["Students", stats.students, "", "on the list"],
-    ["Sent something", stats.studentsSent, "", "students"],
-    ["Sent nothing yet", stats.studentsNothing, stats.studentsNothing > 0 ? "text-navy" : "", "students"],
-    ["Submissions received", stats.submissions, "", `of ${stats.expected} expected`],
-    ["Waiting to be marked", stats.waiting, stats.waiting > 0 ? "text-brand" : "", "submissions"],
+    ["Tasks", stats.taskCount, "", kind === "all" ? "assignments and capstone" : kind === "assignment" ? "assignments" : "capstone"],
+    ["Submitted", stats.submissions, "", "tasks received"],
+    ["Not yet submitted", stats.missing, stats.missing > 0 ? "text-navy" : "", "tasks still missing"],
+    ["Students who have submitted", stats.studentsSent, "", `of ${stats.students} students`],
     ["Marked", stats.graded, "", "submissions"],
+    ["Waiting to be marked", stats.waiting, stats.waiting > 0 ? "text-brand" : "", "submissions"],
     ["Pending requests", stats.pendingRequests, stats.pendingRequests > 0 ? "text-fail" : "", "to decide"],
   ];
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -76,8 +78,8 @@ export default async function CoursePage({ params, searchParams }: {
         </dl>
         {stats.taskCount > 0 && (
           <p className="text-sm text-muted">
-            Every student is expected to send every task: {stats.students} student{stats.students === 1 ? "" : "s"} times {stats.taskCount} task{stats.taskCount === 1 ? "" : "s"} is {stats.expected} submissions.
-            {" "}{stats.submissions} received, so {stats.missing} {stats.missing === 1 ? "is" : "are"} still missing.
+            Every student is expected to send every task, so {stats.students} student{stats.students === 1 ? "" : "s"} and {stats.taskCount} task{stats.taskCount === 1 ? "" : "s"} means {stats.expected} submissions in total.
+            {" "}{stats.submissions} {stats.submissions === 1 ? "has" : "have"} come in, so {stats.missing} {stats.missing === 1 ? "is" : "are"} not yet submitted.
           </p>
         )}
         {stats.progress.length === 0 ? (
