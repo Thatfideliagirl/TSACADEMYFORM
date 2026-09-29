@@ -3,11 +3,39 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/lib/staff";
-import { checkRows, EMAIL_RE, cleanName, normaliseEmail, PROBLEM_TEXT, type RowProblem } from "@/lib/roster";
+import { resolveMx, resolve4, resolve6 } from "node:dns/promises";
+import { checkRows, domainOf, EMAIL_RE, cleanName, normaliseEmail, PROBLEM_TEXT, type RowProblem } from "@/lib/roster";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const listPath = (f: FormData) => `/dashboard/cohorts/${str(f, "cohort_slug")}/${str(f, "course_slug")}/students`;
 const back = (path: string, kind: "error" | "ok", message: string): never => redirect(`${path}?${kind}=${encodeURIComponent(message)}`);
+
+// Which of these email websites clearly cannot receive mail? Only a definite "no such website" counts.
+// If the lookup is slow or fails for any other reason, the website is given the benefit of the doubt.
+async function domainCannotReceiveMail(domain: string): Promise<boolean> {
+  const gone = (e: unknown) => ["ENOTFOUND", "ENODATA"].includes((e as { code?: string })?.code ?? "");
+  const withLimit = <T,>(p: Promise<T>) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no({ code: "ETIMEOUT" }), 4000))]);
+  try {
+    const mx = await withLimit(resolveMx(domain));
+    if (mx.length) return false;
+  } catch (e) { if (!gone(e)) return false; }
+  for (const look of [resolve4, resolve6]) {
+    try { if ((await withLimit(look(domain))).length) return false; } catch (e) { if (!gone(e)) return false; }
+  }
+  return true;
+}
+
+export async function findBadDomains(domains: string[]): Promise<string[]> {
+  await requireStaff();
+  const unique = [...new Set((Array.isArray(domains) ? domains : []).map((d) => String(d).toLowerCase()).filter((d) => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)))].slice(0, 400);
+  const bad: string[] = [];
+  for (let i = 0; i < unique.length; i += 20) {
+    const part = unique.slice(i, i + 20);
+    const results = await Promise.all(part.map((d) => domainCannotReceiveMail(d)));
+    part.forEach((d, j) => { if (results[j]) bad.push(d); });
+  }
+  return bad;
+}
 
 export type ImportResult = { error?: string; added?: number; skipped?: { reason: string; count: number }[] };
 
@@ -25,7 +53,9 @@ export async function importStudents(cohortCourseId: string, rows: { name: strin
     if (!data || data.length < 1000) break;
   }
 
-  const checked = checkRows(rows.map((r) => ({ name: String(r.name ?? ""), email: String(r.email ?? "") })), existing);
+  const cleanRows = rows.map((r) => ({ name: String(r.name ?? ""), email: String(r.email ?? "") }));
+  const domains = cleanRows.map((r) => normaliseEmail(r.email)).filter((e) => EMAIL_RE.test(e)).map(domainOf);
+  const checked = checkRows(cleanRows, existing, new Set(await findBadDomains(domains)));
   const clean = checked.filter((r) => r.problem === "ok");
   for (let i = 0; i < clean.length; i += 500) {
     const chunk = clean.slice(i, i + 500).map((r) => ({ cohort_course_id: cohortCourseId, full_name: r.name, email: r.email }));
@@ -49,6 +79,9 @@ export async function addStudent(formData: FormData) {
   const path = listPath(formData);
   if (!name) back(path, "error", "Type the student's full name.");
   if (!EMAIL_RE.test(email)) back(path, "error", "That email is not typed correctly.");
+  const flagged = checkRows([{ name, email }], [], new Set(await findBadDomains([domainOf(email)])))[0];
+  if (flagged.problem === "typo_domain") back(path, "error", `The website part of that email looks misspelled. ${flagged.hint ?? ""}`.trim());
+  if (flagged.problem === "bad_domain") back(path, "error", "That email website does not exist or cannot receive mail. Check how it is typed.");
   const { error } = await supabase.from("students").insert({ cohort_course_id: str(formData, "cohort_course_id"), full_name: name, email });
   if (error) back(path, "error", error.code === "23505" ? "That email is already on this list." : "Could not add the student.");
   revalidatePath("/dashboard", "layout");
@@ -62,6 +95,9 @@ export async function updateStudent(formData: FormData) {
   const path = listPath(formData);
   if (!name) back(path, "error", "A student needs a name.");
   if (!EMAIL_RE.test(email)) back(path, "error", "That email is not typed correctly.");
+  const flagged = checkRows([{ name, email }], [], new Set(await findBadDomains([domainOf(email)])))[0];
+  if (flagged.problem === "typo_domain") back(path, "error", `The website part of that email looks misspelled. ${flagged.hint ?? ""}`.trim());
+  if (flagged.problem === "bad_domain") back(path, "error", "That email website does not exist or cannot receive mail. Check how it is typed.");
   const { error } = await supabase.from("students").update({ full_name: name, email }).eq("id", str(formData, "id"));
   if (error) back(path, "error", error.code === "23505" ? "Another student on this list already has that email." : "Could not save the change.");
   revalidatePath("/dashboard", "layout");
