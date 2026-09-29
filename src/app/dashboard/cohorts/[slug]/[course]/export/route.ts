@@ -70,6 +70,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const keys: string[] = [];
     for (const t of tasks ?? []) for (const k of t.required_links as string[]) if (!keys.includes(k)) keys.push(k);
+    for (const s of subs) for (const k of Object.keys((s.links ?? {}) as Record<string, string>)) if (!keys.includes(k)) keys.push(k);
     // The person chooses what goes in the sheet. Name, email, task and date are always there.
     const pick = sp.get("pick") === "1";
     const want = new Set(sp.getAll("cols"));

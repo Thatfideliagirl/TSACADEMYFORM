@@ -38,11 +38,10 @@ export async function saveTask(_prev: FormState, formData: FormData): Promise<Fo
   };
 
   if (taskId) {
-    // Once students have submitted, the links asked for stay as they are, so old submissions still make sense.
-    const { count } = await supabase.from("submissions").select("id", { count: "exact", head: true }).eq("task_id", taskId);
+    // Links can change at any time. Links students already sent stay on their submissions.
     const wanted = str(formData, "slug_new");
     const address = wanted ? { slug: slugify(wanted) } : {};
-    const { error } = await supabase.from("tasks").update({ ...((count ?? 0) > 0 ? fields : { ...fields, required_links: links }), ...address }).eq("id", taskId);
+    const { error } = await supabase.from("tasks").update({ ...fields, required_links: links, ...address }).eq("id", taskId);
     if (error) return { error: error.code === "23505" ? "Another task in this course already uses that address. Try a different one." : "Could not save the task." };
     revalidatePath("/dashboard", "layout");
     go(list, "ok", "Task saved.");

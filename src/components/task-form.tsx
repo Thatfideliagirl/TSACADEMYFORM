@@ -64,17 +64,16 @@ export function TaskForm({ ctx, task, hasSubmissions, types }: {
       <fieldset className="flex flex-col gap-2">
         <legend className="font-semibold">Links students must send</legend>
         <p className="text-sm text-muted">
-          {hasSubmissions ? "Students have already submitted, so these cannot be changed any more." : "Tick every kind of link this task needs. Each one gets its own box on the form. Need a different kind? Add it on the Tasks page first."}
+          {hasSubmissions ? "Some students have already submitted. You can still change this list. Links they already sent are kept and still show when you mark. Need a different kind? Add it on the Tasks page first." : "Tick every kind of link this task needs. Each one gets its own box on the form. Need a different kind? Add it on the Tasks page first."}
         </p>
         <div className="mt-1 grid gap-2 sm:grid-cols-2">
           {types.map(({ key: k, label }) => (
-            <label key={k} className={`flex items-center gap-3 rounded-xl border-[1.5px] border-line bg-white px-4 py-3 font-medium has-[:checked]:border-brand has-[:checked]:bg-sky ${hasSubmissions ? "opacity-70" : "cursor-pointer"}`}>
-              <input type="checkbox" name="link" value={k} defaultChecked={v.required_links.includes(k)} disabled={hasSubmissions} className="h-5 w-5 accent-brand" />
+            <label key={k} className={`flex items-center gap-3 rounded-xl border-[1.5px] border-line bg-white px-4 py-3 font-medium has-[:checked]:border-brand has-[:checked]:bg-sky cursor-pointer`}>
+              <input type="checkbox" name="link" value={k} defaultChecked={v.required_links.includes(k)} className="h-5 w-5 accent-brand" />
               {label}
             </label>
           ))}
         </div>
-        {hasSubmissions && v.required_links.map((k) => <input key={k} type="hidden" name="link" value={k} />)}
       </fieldset>
 
       <label className="flex items-center gap-3 font-medium">
