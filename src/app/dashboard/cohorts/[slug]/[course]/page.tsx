@@ -33,6 +33,9 @@ export default async function CoursePage({ params, searchParams }: {
   const assigned = new Set(mods.map((m) => m.user_id));
   const canAdd = (moderators ?? []).filter((m) => !assigned.has(m.id));
 
+  const { count: studentCount } = await supabase.from("students").select("id", { count: "exact", head: true }).eq("cohort_course_id", cc.id);
+  const { count: taskCount } = await supabase.from("tasks").select("id", { count: "exact", head: true }).eq("cohort_course_id", cc.id);
+
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const link = `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}/submit/${cc.form_slug}`;
@@ -118,12 +121,18 @@ export default async function CoursePage({ params, searchParams }: {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">
-        {["Students", "Tasks", "Submissions"].map((t) => (
-          <div key={t} className="rounded-2xl border border-dashed border-line bg-white/60 p-5">
-            <h3 className="font-display text-lg font-semibold">{t}</h3>
-            <p className="mt-1 text-sm text-muted">Coming in a later stage.</p>
-          </div>
-        ))}
+        <Link href={`/dashboard/cohorts/${cohort.slug}/${course.slug}/students`} className="rounded-2xl border border-line bg-white p-5 transition hover:border-brand hover:shadow-sm">
+          <h3 className="font-display text-lg font-semibold">Students</h3>
+          <p className="mt-1 text-sm text-muted">{studentCount ?? 0} on the list. Upload, add and edit.</p>
+        </Link>
+        <Link href={`/dashboard/cohorts/${cohort.slug}/${course.slug}/tasks`} className="rounded-2xl border border-line bg-white p-5 transition hover:border-brand hover:shadow-sm">
+          <h3 className="font-display text-lg font-semibold">Tasks</h3>
+          <p className="mt-1 text-sm text-muted">{taskCount ?? 0} task{taskCount === 1 ? "" : "s"}. Assignments and the capstone.</p>
+        </Link>
+        <div className="rounded-2xl border border-dashed border-line bg-white/60 p-5">
+          <h3 className="font-display text-lg font-semibold">Submissions</h3>
+          <p className="mt-1 text-sm text-muted">Coming in a later stage.</p>
+        </div>
       </section>
 
       {isAdmin && (
