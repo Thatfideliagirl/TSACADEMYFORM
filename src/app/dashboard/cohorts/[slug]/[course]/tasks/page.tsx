@@ -6,6 +6,7 @@ import { showLagos } from "@/lib/lagos";
 import { allTypes } from "@/lib/link-types";
 import { createLinkType, deleteLinkType } from "@/app/actions/link-types";
 import { Banner } from "@/components/banner";
+import { CourseNav } from "@/components/course-nav";
 import { CopyButton } from "@/components/copy-button";
 
 export default async function TasksPage({ params, searchParams }: {
@@ -40,6 +41,8 @@ export default async function TasksPage({ params, searchParams }: {
         </div>
         <p className="mt-2 max-w-2xl text-muted">Assignments and the capstone for this course. Each one has its own link you can share, and students can also pick it on the course form.</p>
       </div>
+
+      <CourseNav base={`/dashboard/cohorts/${cohort.slug}/${course.slug}`} active="tasks" />
 
       <Banner error={error} ok={ok} />
 

@@ -5,6 +5,7 @@ import { inviteStaff, newCode, type CodeState } from "@/app/actions/people";
 import { SubmitButton } from "./submit-button";
 import { CopyButton } from "./copy-button";
 import { inputClass } from "./auth-shell";
+import { useKeepValues } from "./use-keep-values";
 
 export function CodeBox({ state }: { state: CodeState }) {
   if (!state?.code) return null;
@@ -23,9 +24,9 @@ export function CodeBox({ state }: { state: CodeState }) {
 type Group = { cohort: string; items: { id: string; label: string }[] };
 
 export function InviteForm({ groups }: { groups: Group[] }) {
-  const [state, action] = useActionState(inviteStaff, undefined);
+  const { state, pending, onSubmit } = useKeepValues(inviteStaff);
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-[1fr_11rem]">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="inv-email" className="font-semibold">Email</label>
@@ -59,7 +60,7 @@ export function InviteForm({ groups }: { groups: Group[] }) {
         </fieldset>
       )}
       {state?.error && <p role="alert" className="rounded-xl bg-[#fbe9e6] px-4 py-3 text-sm font-medium text-fail">{state.error}</p>}
-      <SubmitButton className="self-start">Create invite code</SubmitButton>
+      <SubmitButton pending={pending} className="self-start">Create invite code</SubmitButton>
       <CodeBox state={state} />
     </form>
   );

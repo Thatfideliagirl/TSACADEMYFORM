@@ -34,6 +34,11 @@ Coco changed the design after the first draft. Where the sections below say some
 13. Student form addresses: /submit/<form_slug> (course form, student picks a task after verifying) and /submit/<form_slug>/<task_slug> (direct link to one task). Students verify with name and email on the server, get a signed pass valid for 2 hours, and every later step needs it.
 14. Link open check (src/lib/link-open.ts). Says "locked" only on a clear sign (Google sign in redirect, Trello or Notion says not public, 401 or 404). If it cannot tell, the student passes and the link is flagged "Could not verify" for the moderator. Never lock out a real student because a site blocks robots.
 15. Every inner page has a clear "Back to ..." button (src/components/back-link.tsx).
+16. Course pages. Each course inside a cohort has Overview (numbers, filter All or Assignments or Capstone, progress per task), Submissions (filters, search, marking, export), Not submitted (with export), Requests, Students and Tasks, all under /dashboard/cohorts/<cohort>/<course>/.
+17. Requests. A student who already submitted gets ONE request per task: replace one link (same kind, checked again) or leave a note, reason of 40 characters or more. A moderator allows or declines. Allowing a replacement updates the submission in place, keeps the old link in submission_link_history, and flags "Changed after marking" if it was already marked. Saving a score clears that flag.
+18. Exports (Excel or CSV) are per course: one task, all assignments, the capstone, or everything in the course. A separate export lists students who have not submitted a task.
+19. Forms keep what the person typed when the server sends back an error (src/components/use-keep-values.ts). Use it for every new form that uses a server action with an error message.
+20. Testing. The whole flow was tested end to end against a local copy of the database and login (real security rules, real Postgres). See the test notes in the session history. /api/health gives a yes or no self check of the live site.
 
 ## The problem
 

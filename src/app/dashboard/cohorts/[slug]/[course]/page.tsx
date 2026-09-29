@@ -6,16 +6,19 @@ import { requireStaff } from "@/lib/staff";
 import { Banner } from "@/components/banner";
 import { CopyButton } from "@/components/copy-button";
 import { DangerZone } from "@/components/danger-zone";
+import { CourseNav } from "@/components/course-nav";
+import { courseStats } from "@/lib/course-stats";
 import { assignModerator, removeCourseFromCohort, removeModerator, updateCohortCourse } from "@/app/actions/cohorts";
 
 type One<T> = T | T[] | null;
 const first = <T,>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v);
 
 export default async function CoursePage({ params, searchParams }: {
-  params: Promise<{ slug: string; course: string }>; searchParams: Promise<{ error?: string; ok?: string }>;
+  params: Promise<{ slug: string; course: string }>; searchParams: Promise<{ error?: string; ok?: string; kind?: string }>;
 }) {
   const { slug, course: courseSlug } = await params;
-  const { error, ok } = await searchParams;
+  const { error, ok, kind: kindParam } = await searchParams;
+  const kind = kindParam === "assignment" || kindParam === "capstone" ? kindParam : "all";
   const { supabase, profile } = await requireStaff();
   const isAdmin = profile.role === "admin";
 
@@ -34,8 +37,8 @@ export default async function CoursePage({ params, searchParams }: {
   const assigned = new Set(mods.map((m) => m.user_id));
   const canAdd = (moderators ?? []).filter((m) => !assigned.has(m.id));
 
-  const { count: studentCount } = await supabase.from("students").select("id", { count: "exact", head: true }).eq("cohort_course_id", cc.id);
-  const { count: taskCount } = await supabase.from("tasks").select("id", { count: "exact", head: true }).eq("cohort_course_id", cc.id);
+  const stats = await courseStats(supabase, cc.id, kind);
+  const base = `/dashboard/cohorts/${cohort.slug}/${course.slug}`;
 
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
@@ -49,7 +52,58 @@ export default async function CoursePage({ params, searchParams }: {
         <p className="mt-1 text-muted">{cohort.name}</p>
       </div>
 
+      <CourseNav base={base} active="" pending={stats.pendingRequests} />
+
       <Banner error={error} ok={ok} />
+
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-xl font-semibold">Overview</h2>
+          <div className="flex gap-1 rounded-xl bg-sky p-1 text-sm font-semibold">
+            {([["all", "All"], ["assignment", "Assignments"], ["capstone", "Capstone"]] as const).map(([k, label]) => (
+              <Link key={k} href={k === "all" ? base : `${base}?kind=${k}`} aria-current={kind === k ? "page" : undefined}
+                className={`rounded-lg px-3 py-1.5 ${kind === k ? "bg-white text-navy shadow-sm" : "text-muted hover:text-navy"}`}>{label}</Link>
+            ))}
+          </div>
+        </div>
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {([
+            ["Students", stats.students, ""],
+            ["Submitted", stats.submitted, ""],
+            ["Not yet submitted", stats.notSubmitted, stats.notSubmitted > 0 ? "text-navy" : ""],
+            ["Marked", stats.graded, ""],
+            ["Waiting to be marked", stats.ungraded, stats.ungraded > 0 ? "text-brand" : ""],
+            ["Pending requests", stats.pendingRequests, stats.pendingRequests > 0 ? "text-fail" : ""],
+          ] as const).map(([label, n, tone]) => (
+            <div key={label} className="rounded-2xl border border-line bg-white p-4">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
+              <dd className={`mt-1 font-display text-3xl font-semibold ${tone}`}>{n}</dd>
+            </div>
+          ))}
+        </dl>
+        {stats.progress.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-line bg-white px-6 py-8 text-center text-muted">
+            No tasks here yet. <Link href={`${base}/tasks/new`} className="font-semibold text-brand underline">Create the first task</Link>.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {stats.progress.map((t) => {
+              const pct = stats.students ? Math.min(100, Math.round((t.submitted / stats.students) * 100)) : 0;
+              return (
+                <li key={t.id} className="rounded-2xl border border-line bg-white p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <Link href={`${base}/submissions?task=${t.slug}`} className="font-display text-lg font-semibold hover:text-brand">{t.title}</Link>
+                    <span className="text-sm text-muted">{t.submitted} of {stats.students} submitted, {t.graded} marked</span>
+                  </div>
+                  <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-sky-deep" role="img" aria-label={`${pct} percent submitted`}>
+                    <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-line bg-white p-6">
         <h2 className="font-display text-xl font-semibold">Form for students</h2>
@@ -121,20 +175,6 @@ export default async function CoursePage({ params, searchParams }: {
         ))}
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <Link href={`/dashboard/cohorts/${cohort.slug}/${course.slug}/students`} className="rounded-2xl border border-line bg-white p-5 transition hover:border-brand hover:shadow-sm">
-          <h3 className="font-display text-lg font-semibold">Students</h3>
-          <p className="mt-1 text-sm text-muted">{studentCount ?? 0} on the list. Upload, add and edit.</p>
-        </Link>
-        <Link href={`/dashboard/cohorts/${cohort.slug}/${course.slug}/tasks`} className="rounded-2xl border border-line bg-white p-5 transition hover:border-brand hover:shadow-sm">
-          <h3 className="font-display text-lg font-semibold">Tasks</h3>
-          <p className="mt-1 text-sm text-muted">{taskCount ?? 0} task{taskCount === 1 ? "" : "s"}. Assignments and the capstone.</p>
-        </Link>
-        <div className="rounded-2xl border border-dashed border-line bg-white/60 p-5">
-          <h3 className="font-display text-lg font-semibold">Submissions</h3>
-          <p className="mt-1 text-sm text-muted">Coming in a later stage.</p>
-        </div>
-      </section>
 
       {isAdmin && (
         <DangerZone title="Remove this course from the cohort" confirmWord={course.name} action={removeCourseFromCohort} buttonLabel="Remove course for good"

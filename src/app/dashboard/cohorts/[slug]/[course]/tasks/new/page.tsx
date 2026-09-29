@@ -19,7 +19,7 @@ export default async function NewTaskPage({ params, searchParams }: {
         <p className="mt-1 text-muted">{course.name}, {cohort.name}</p>
       </div>
       <Banner error={error} />
-      <TaskForm ctx={{ cohortCourseId: cc.id, cohortSlug: cohort.slug, courseSlug: course.slug }} types={allTypes(custom ?? [])} />
+      <TaskForm ctx={{ cohortCourseId: cc.id, cohortSlug: cohort.slug, courseSlug: course.slug }} types={allTypes(custom ?? []).map(({ key, label }) => ({ key, label }))} />
     </div>
   );
 }

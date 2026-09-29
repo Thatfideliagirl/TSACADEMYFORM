@@ -14,6 +14,10 @@ const NOT_REGISTERED = "This name and email are not registered for this cohort. 
 export type TaskInfo = {
   slug: string; kind: "assignment" | "capstone"; title: string; instructions: string;
   required: string[]; custom: CustomLinkType[]; submittedAt: string | null;
+  // What the student sent, so they can pick a link to replace. Only their own submission.
+  sent: { key: string; label: string; url: string }[];
+  // The one request they may use per task, once made.
+  request: { kind: "replace_link" | "note"; status: "pending" | "approved" | "declined" } | null;
 };
 export type VerifyResult =
   | { ok: false; error: string }
@@ -50,15 +54,22 @@ export async function verifyStudent(input: { formSlug: string; name: string; ema
 
   const { data: tasks } = await db.from("tasks").select(TASK_COLUMNS).eq("cohort_course_id", form.id).order("created_at");
   const open = ((tasks ?? []) as TaskRow[]).filter((t) => taskIsOpen(t));
-  const { data: subs } = await db.from("submissions").select("task_id, submitted_at").eq("student_id", student.id);
-  const done = new Map((subs ?? []).map((s) => [s.task_id, s.submitted_at as string]));
+  const { data: subs } = await db.from("submissions").select("task_id, submitted_at, links").eq("student_id", student.id);
+  const done = new Map((subs ?? []).map((s) => [s.task_id, s]));
+  const { data: reqs } = await db.from("requests").select("task_id, kind, status").eq("student_id", student.id);
+  const reqBy = new Map((reqs ?? []).map((r) => [r.task_id, r]));
 
   const list: TaskInfo[] = [];
   for (const t of open) {
-    const { custom } = await defsForTask(t);
+    const { defs, custom } = await defsForTask(t);
+    const mine = done.get(t.id);
+    const links = (mine?.links ?? {}) as Record<string, string>;
+    const req = reqBy.get(t.id);
     list.push({
       slug: t.slug, kind: t.kind as "assignment" | "capstone", title: t.title, instructions: t.instructions,
-      required: t.required_links, custom, submittedAt: done.get(t.id) ?? null,
+      required: t.required_links, custom, submittedAt: (mine?.submitted_at as string | undefined) ?? null,
+      sent: mine ? defs.filter((d) => links[d.key]).map((d) => ({ key: d.key, label: d.label, url: links[d.key] })) : [],
+      request: req ? { kind: req.kind as "replace_link" | "note", status: req.status as "pending" | "approved" | "declined" } : null,
     });
   }
   return { ok: true, token: issuePass(student.id, form.id), studentName: student.full_name, tasks: list };
@@ -147,3 +158,41 @@ export async function submitWork(input: { token: string; taskSlug: string; links
     received: defs.map((d) => ({ label: d.label, url: links[d.key], verified: !unverified.includes(d.key) })),
   };
 }
+
+export type RequestResult = { ok: true } | { ok: false; error: string };
+
+// Step 8: a student who already submitted may make ONE request per task.
+// Either replace one link (same kind of link, checked again) or leave a note. A reason of 40 characters or more is needed.
+export async function sendRequest(input: { token: string; taskSlug: string; kind: "replace_link" | "note"; linkKey?: string; newUrl?: string; reason: string }): Promise<RequestResult> {
+  const t = await loadTask(input.token, input.taskSlug);
+  if (t.error !== undefined) return { ok: false, error: t.error };
+  const { pass, db, task, defs, custom } = t;
+
+  const reason = String(input.reason ?? "").trim();
+  if (reason.length < 40) return { ok: false, error: "Please explain in at least 40 characters, so the moderator understands." };
+
+  const { data: sub } = await db.from("submissions").select("id, links").eq("task_id", task.id).eq("student_id", pass.sid).maybeSingle();
+  if (!sub) return { ok: false, error: "You have not submitted this task yet." };
+  const { data: used } = await db.from("requests").select("id").eq("task_id", task.id).eq("student_id", pass.sid).maybeSingle();
+  if (used) return { ok: false, error: "You have already used your one request for this task." };
+
+  const row: Record<string, unknown> = { task_id: task.id, student_id: pass.sid, submission_id: sub.id, kind: input.kind, reason };
+  if (input.kind === "replace_link") {
+    const def = defs.find((d) => d.key === input.linkKey);
+    if (!def) return { ok: false, error: "Choose which link you want to replace." };
+    const url = cleanUrl(String(input.newUrl ?? ""));
+    const type = checkLinkType(def, url, allTypes(custom));
+    if (!type.ok) return { ok: false, error: `${def.label}: ${type.message}` };
+    if (norm(url) === norm(String((sub.links as Record<string, string>)[def.key] ?? ""))) return { ok: false, error: "That is the same link you already sent. Use a note instead if the link itself is fine." };
+    if ((await checkOpen(def, url)) === "locked") return { ok: false, error: `${def.label}: this link is locked. Set sharing to Anyone with the link, then paste it again.` };
+    row.link_type = def.key; row.new_url = url;
+  } else if (input.kind !== "note") {
+    return { ok: false, error: "Choose what you want to do." };
+  }
+
+  const { error } = await db.from("requests").insert(row);
+  if (error) return { ok: false, error: error.code === "23505" ? "You have already used your one request for this task." : "Something went wrong sending your request. Please try again." };
+  return { ok: true };
+}
+
+const norm = (s: string) => s.trim().toLowerCase().replace(/\/+$/, "");

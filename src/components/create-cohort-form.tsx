@@ -1,14 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
 import { createCohort } from "@/app/actions/cohorts";
 import { SubmitButton } from "./submit-button";
 import { inputClass } from "./auth-shell";
+import { useKeepValues } from "./use-keep-values";
 
 export function CreateCohortForm({ courses }: { courses: { id: string; name: string }[] }) {
-  const [state, action] = useActionState(createCohort, undefined);
+  const { state, pending, onSubmit } = useKeepValues(createCohort);
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="name" className="font-semibold">Cohort name</label>
         <input id="name" name="name" required placeholder="Cohort 7" className={inputClass} />
@@ -26,7 +26,7 @@ export function CreateCohortForm({ courses }: { courses: { id: string; name: str
         </div>
       </fieldset>
       {state?.error && <p role="alert" className="rounded-xl bg-[#fbe9e6] px-4 py-3 text-sm font-medium text-fail">{state.error}</p>}
-      <SubmitButton className="self-start">Create cohort</SubmitButton>
+      <SubmitButton pending={pending} className="self-start">Create cohort</SubmitButton>
     </form>
   );
 }
