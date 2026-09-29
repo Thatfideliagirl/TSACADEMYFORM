@@ -6,10 +6,14 @@ import { allTypes, type CustomLinkType, type LinkDef } from "@/lib/link-types";
 
 export async function getForm(formSlug: string) {
   const db = createAdminClient();
-  const { data } = await db
+  const { data, error } = await db
     .from("cohort_courses")
     .select("id, form_name, form_slug, is_open, cohorts(name, is_open), courses(name)")
     .eq("form_slug", formSlug).maybeSingle();
+  if (error) {
+    console.error("Form lookup failed", error.code, error.message);
+    throw new Error("FORM_LOOKUP_FAILED");
+  }
   if (!data) return null;
   const one = <T,>(v: T | T[] | null) => (Array.isArray(v) ? v[0] ?? null : v);
   const cohort = one(data.cohorts as { name: string; is_open: boolean } | { name: string; is_open: boolean }[] | null);
