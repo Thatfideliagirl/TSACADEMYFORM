@@ -1,5 +1,6 @@
 "use client";
 
+import { useHydrated } from "./use-hydrated";
 import { useRef, useState, useTransition } from "react";
 import { checkLink, sendRequest, submitWork, verifyStudent, type TaskInfo } from "@/app/actions/submit";
 import { allTypes, checkLinkType, findType, type LinkDef } from "@/lib/link-types";
@@ -49,6 +50,7 @@ function Back({ onClick, children }: { onClick: () => void; children: React.Reac
 
 
 function RequestPanel({ token, task, onSent }: { token: string; task: TaskInfo; onSent: (r: NonNullable<TaskInfo["request"]>) => void }) {
+  const hydrated = useHydrated();
   const canReplace = task.sent.length > 0;
   const [mode, setMode] = useState<"" | "replace_link" | "note">("");
   const [linkKey, setLinkKey] = useState(task.sent[0]?.key ?? "");
@@ -144,7 +146,7 @@ function RequestPanel({ token, task, onSent }: { token: string; task: TaskInfo; 
       )}
 
       {error && <p role="alert" className="rounded-xl bg-[#fbe9e6] px-4 py-3 text-sm font-medium text-fail">{error}</p>}
-      {mode && <button disabled={!ready || pending} className="rounded-xl bg-brand px-5 py-3 font-display text-base font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40">{pending ? "Sending..." : "Send request"}</button>}
+      {mode && <button disabled={!hydrated || !ready || pending} className="rounded-xl bg-brand px-5 py-3 font-display text-base font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40">{pending ? "Sending..." : "Send request"}</button>}
     </form>
   );
 }
@@ -152,6 +154,7 @@ function RequestPanel({ token, task, onSent }: { token: string; task: TaskInfo; 
 export function StudentForm({ formSlug, formName, courseName, cohortName, open, fixedTask }: {
   formSlug: string; formName: string; courseName: string; cohortName: string; open: boolean; fixedTask?: string;
 }) {
+  const hydrated = useHydrated();
   const [stage, setStage] = useState<"verify" | "pick" | "fill" | "already" | "done">("verify");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -294,7 +297,7 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
             <input id="email" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required className={input} />
           </div>
           {verifyError && <p role="alert" className="rounded-xl bg-[#fbe9e6] px-4 py-3 text-sm font-medium text-fail">{verifyError}</p>}
-          <button disabled={pending} className="rounded-xl bg-brand px-5 py-3.5 font-display text-base font-semibold text-white hover:bg-brand-dark disabled:opacity-60">
+          <button disabled={pending || !hydrated} className="rounded-xl bg-brand px-5 py-3.5 font-display text-base font-semibold text-white hover:bg-brand-dark disabled:opacity-60">
             {pending ? "Checking..." : "Continue"}
           </button>
         </form>
@@ -419,7 +422,7 @@ export function StudentForm({ formSlug, formName, courseName, cohortName, open, 
 
         <div className="flex flex-col gap-2">
           {submitError && <p role="alert" className="rounded-xl bg-[#fbe9e6] px-4 py-3 text-sm font-medium text-fail">{submitError}</p>}
-          <button disabled={!ready || pending} className="rounded-xl bg-brand px-5 py-3.5 font-display text-base font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40">
+          <button disabled={!hydrated || !ready || pending} className="rounded-xl bg-brand px-5 py-3.5 font-display text-base font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40">
             {pending ? "Submitting..." : "Submit my work"}
           </button>
           <p className="text-center text-sm text-muted" aria-live="polite">
