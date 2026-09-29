@@ -46,7 +46,7 @@ export async function decideRequest(formData: FormData) {
     await db.from("submission_link_history").insert({ submission_id: sub!.id, link_type: key, old_url: oldUrl ?? "", new_url: req!.new_url });
     const { error } = await db.from("submissions").update({
       links, unverified_links: [...unverified],
-      reviewed: { ...(sub!.reviewed as Record<string, boolean>), [key]: false },
+      reviewed: { ...(sub!.reviewed as Record<string, boolean>), [key]: false, [`opens:${key}`]: false },
       changed_after_grading: sub!.score !== null || sub!.graded_at !== null,
     }).eq("id", sub!.id);
     if (error) back(to, "error", "Could not change the submission. Nothing was changed.");

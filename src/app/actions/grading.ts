@@ -20,7 +20,7 @@ export async function saveGrade(formData: FormData) {
   const { supabase, profile } = await requireStaff();
   const to = str(formData, "return_to");
   const { data: sub } = await supabase.from("submissions")
-    .select("id, links, score, tasks(max_score)").eq("id", str(formData, "submission_id")).maybeSingle();
+    .select("id, links, unverified_links, score, tasks(max_score)").eq("id", str(formData, "submission_id")).maybeSingle();
   if (!sub) back(to, "error", "That submission could not be found.");
 
   const task = Array.isArray(sub!.tasks) ? sub!.tasks[0] : sub!.tasks;
@@ -34,6 +34,9 @@ export async function saveGrade(formData: FormData) {
 
   const reviewed: Record<string, boolean> = {};
   for (const key of Object.keys(sub!.links as Record<string, string>)) reviewed[key] = formData.get(`reviewed_${key}`) === "on";
+  // For links the system could not check, the moderator says whether they opened it and it works for anyone.
+  // Stored next to the reviewed ticks under the name "opens:<kind>", so no database change is needed.
+  for (const key of (sub!.unverified_links ?? []) as string[]) reviewed[`opens:${key}`] = formData.get(`opens_${key}`) === "on";
 
   const { error } = await supabase.from("submissions").update({
     reviewed, score, comment: str(formData, "comment"),
