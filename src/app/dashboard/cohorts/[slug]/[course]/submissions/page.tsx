@@ -6,6 +6,7 @@ import { getCourseContext } from "@/lib/course-context";
 import { allTypes } from "@/lib/link-types";
 import { showLagos } from "@/lib/lagos";
 import { MarkingForm } from "@/components/marking-form";
+import { CertificateSelectBar } from "@/components/select-bar";
 import { siteOrigin } from "@/lib/origin";
 
 type One<T> = T | T[] | null;
@@ -135,6 +136,8 @@ export default async function SubmissionsPage({ params, searchParams }: { params
       {!rows?.length ? (
         <p className="rounded-2xl border border-dashed border-line bg-white px-6 py-10 text-center text-muted">Nothing to show yet.</p>
       ) : (
+        <>
+        {rows.some((r) => r.score !== null && first(r.tasks as One<{ kind: string }>)?.kind === "capstone") && <CertificateSelectBar formId="cert-add-form" returnTo={returnTo} />}
         <ul className="flex flex-col gap-3">
           {rows.map((r) => {
             const st = first(r.students as One<{ full_name: string; email: string }>);
@@ -148,8 +151,11 @@ export default async function SubmissionsPage({ params, searchParams }: { params
             const req = reqBy.get(r.id);
             const marked = r.score !== null;
             return (
-              <li key={r.id}>
-                <details className="group rounded-2xl border border-line bg-white open:shadow-sm">
+              <li key={r.id} className="flex items-start gap-3">
+                {marked && tk?.kind === "capstone" && (
+                  <input type="checkbox" name="ids" value={r.id} form="cert-add-form" aria-label={`Select ${st?.full_name} for a certificate`} className="mt-5 h-5 w-5 flex-none accent-brand" />
+                )}
+                <details className="group min-w-0 flex-1 rounded-2xl border border-line bg-white open:shadow-sm">
                   <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
                     <span className="min-w-0">
                       <span className="block font-display text-lg font-semibold">{st?.full_name}</span>
@@ -197,6 +203,7 @@ export default async function SubmissionsPage({ params, searchParams }: { params
             );
           })}
         </ul>
+        </>
       )}
 
       {pages > 1 && (

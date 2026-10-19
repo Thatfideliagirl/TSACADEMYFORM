@@ -5,6 +5,7 @@ const ITEMS = [
   ["submissions", "Submissions"],
   ["not-submitted", "Not submitted"],
   ["resubmissions", "Resubmissions"],
+  ["certificates", "Certificates"],
   ["requests", "Requests"],
   ["students", "Students"],
   ["tasks", "Tasks"],

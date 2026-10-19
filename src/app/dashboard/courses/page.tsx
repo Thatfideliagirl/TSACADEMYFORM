@@ -1,12 +1,15 @@
 import { requireAdmin } from "@/lib/staff";
 import { BackLink } from "@/components/back-link";
 import { Banner } from "@/components/banner";
+import Link from "next/link";
 import { addCourse, deleteCourse, renameCourse } from "@/app/actions/courses";
 
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ error?: string; ok?: string }> }) {
   const { error, ok } = await searchParams;
   const { supabase } = await requireAdmin();
   const { data: courses } = await supabase.from("courses").select("id, name, cohort_courses(id)").order("name");
+  const { data: templates } = await supabase.from("certificate_templates").select("course_id");
+  const hasTemplate = new Set((templates ?? []).map((t) => t.course_id));
 
   return (
     <div className="flex flex-col gap-8">
@@ -43,6 +46,9 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
                 </div>
                 <button className="rounded-lg border-[1.5px] border-line px-3 py-2 text-sm font-semibold text-brand hover:bg-sky">Save</button>
               </form>
+              <Link href={`/dashboard/courses/${c.id}/certificate`} className="rounded-lg border-[1.5px] border-line px-3 py-2 text-sm font-semibold text-brand hover:bg-sky">
+                {hasTemplate.has(c.id) ? "Certificate template" : "Add certificate template"}
+              </Link>
               <form action={deleteCourse}>
                 <input type="hidden" name="id" value={c.id} />
                 <button className="rounded-lg border-[1.5px] border-[#e8b9b2] px-3 py-2 text-sm font-semibold text-fail hover:bg-[#fbe9e6]">Delete</button>
