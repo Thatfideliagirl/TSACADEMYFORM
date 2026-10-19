@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { BackLink } from "@/components/back-link";
 import { Banner } from "@/components/banner";
 import { CopyButton } from "@/components/copy-button";
@@ -18,6 +19,8 @@ export default async function CertificatesPage({ params, searchParams }: { param
   const { error, ok } = await searchParams;
   const { supabase, profile, cohort, course, cc } = await getCourseContext(slug, courseSlug);
   const base = `/dashboard/cohorts/${cohort.slug}/${course.slug}`;
+  // Only admins issue certificates. Moderators add students from Submissions.
+  if (profile.role !== "admin") redirect(base);
 
   const [{ data: rows }, { data: tpl }, origin] = await Promise.all([
     supabase.from("certificates").select("id, status, issue_date, students(full_name, email)").eq("cohort_course_id", cc.id).order("added_at"),
@@ -46,9 +49,7 @@ export default async function CertificatesPage({ params, searchParams }: { param
       {!tpl && (
         <div className="rounded-2xl border-[1.5px] border-brand bg-sky px-5 py-4">
           <p className="font-semibold">This course has no certificate template yet.</p>
-          <p className="mt-1 text-sm">{profile.role === "admin"
-            ? <>Add it once on the Courses page. Every cohort of this course will use it. <Link href={`/dashboard/courses/${course.id}/certificate`} className="font-semibold text-brand underline">Add the template</Link></>
-            : "Ask an admin to add it on the Courses page. You can still add students to the list now."}</p>
+          <p className="mt-1 text-sm">Add it once on the Courses page. Every cohort of this course will use it. <Link href={`/dashboard/courses/${course.id}/certificate`} className="font-semibold text-brand underline">Add the template</Link></p>
         </div>
       )}
 

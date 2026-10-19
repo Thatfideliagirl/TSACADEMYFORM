@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getStaff } from "@/lib/staff";
 
 const ITEMS = [
   ["", "Overview"],
@@ -12,11 +13,13 @@ const ITEMS = [
 ] as const;
 
 // The pages inside one course. On a small phone the buttons wrap onto two rows, so none are hidden.
-export function CourseNav({ base, active, pending = 0, resubmit = 0 }: { base: string; active: string; pending?: number; resubmit?: number }) {
+export async function CourseNav({ base, active, pending = 0, resubmit = 0 }: { base: string; active: string; pending?: number; resubmit?: number }) {
+  // Issuing certificates is for admins, so moderators do not see that tab.
+  const isAdmin = (await getStaff())?.profile.role === "admin";
   return (
     <nav aria-label="Pages in this course">
       <ul className="flex flex-wrap gap-1">
-        {ITEMS.map(([path, label]) => (
+        {ITEMS.filter(([path]) => isAdmin || path !== "certificates").map(([path, label]) => (
           <li key={path}>
             <Link href={path ? `${base}/${path}` : base} aria-current={active === path ? "page" : undefined}
               className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold ${active === path ? "bg-brand text-white" : "text-navy hover:bg-sky-deep"}`}>
