@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/staff";
 import { BackLink } from "@/components/back-link";
 import { Banner } from "@/components/banner";
+import { removeModerator } from "@/app/actions/cohorts";
 import { CancelInviteButton, InviteForm, NewCodeButton, RemoveStaffButton } from "@/components/invite-forms";
 
 type One<T> = T | T[] | null;
@@ -64,10 +65,23 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
                 <p className="font-semibold">{s.full_name}</p>
                 <p className="text-sm text-muted">{s.email}, {s.role}</p>
                 {s.role === "moderator" && (
+                  <p className="mt-1.5 text-xs text-muted">Tap the x on a course to take them off it. To add courses, invite their email again and tick the courses.</p>
+                )}
+                {s.role === "moderator" && (
                   <ul className="mt-1.5 flex flex-wrap gap-1.5">
                     {(s.cohort_course_moderators ?? []).map((m) => {
                       const cc = first(m.cohort_courses);
-                      return <li key={m.cohort_course_id} className="rounded-full bg-sky px-2.5 py-0.5 text-xs font-semibold text-brand">{first(cc?.courses ?? null)?.name ?? "Course"}, {first(cc?.cohorts ?? null)?.name ?? "Cohort"}</li>;
+                      const name = `${first(cc?.courses ?? null)?.name ?? "Course"}, ${first(cc?.cohorts ?? null)?.name ?? "Cohort"}`;
+                      return (
+                        <li key={m.cohort_course_id} className="flex items-center gap-1 rounded-full bg-sky py-0.5 pl-2.5 pr-1 text-xs font-semibold text-brand">
+                          {name}
+                          <form action={removeModerator}>
+                            <input type="hidden" name="cohort_course_id" value={m.cohort_course_id} />
+                            <input type="hidden" name="user_id" value={s.id} />
+                            <button aria-label={`Take ${s.full_name} off ${name}`} title="Take off this course" className="grid h-5 w-5 place-items-center rounded-full text-sm leading-none hover:bg-sky-deep">&times;</button>
+                          </form>
+                        </li>
+                      );
                     })}
                     {!(s.cohort_course_moderators ?? []).length && <li className="text-xs text-muted">No course given yet</li>}
                   </ul>
