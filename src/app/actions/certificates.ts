@@ -74,7 +74,7 @@ async function addSubmissions(ids: string[], onlyCourse?: string) {
 }
 
 const summary = (r: { added: number; already: number; skipped: number }) =>
-  `${r.added} added to Certificates.${r.already ? ` ${r.already} were already on the list.` : ""}${r.skipped ? ` ${r.skipped} skipped because they are not a marked capstone.` : ""}`;
+  `${r.added} added to Certificates. An admin issues them.${r.already ? ` ${r.already} were already on the list.` : ""}${r.skipped ? ` ${r.skipped} skipped because they are not a marked capstone.` : ""}`;
 
 // From Submissions: the ticked rows.
 export async function addToCertificates(formData: FormData) {
@@ -87,7 +87,7 @@ export async function addToCertificates(formData: FormData) {
 
 // From the Certificates page: every marked capstone in this course.
 export async function addAllMarkedCapstones(formData: FormData) {
-  const { supabase } = await requireStaff();
+  const { supabase } = await requireAdmin();
   const to = str(formData, "return_to");
   const cc = str(formData, "cohort_course_id");
   const { data } = await supabase.from("submissions").select("id, tasks!inner(kind, cohort_course_id)").eq("tasks.cohort_course_id", cc).eq("tasks.kind", "capstone").not("score", "is", null).limit(5000);
@@ -97,9 +97,9 @@ export async function addAllMarkedCapstones(formData: FormData) {
   catch (e) { if ((e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) throw e; back(to, "error", "Could not add them. Please try again."); }
 }
 
-// Issue: sets the issue date and unlocks the certificate for the student.
+// Issue: sets the issue date and unlocks the certificate for the student. Admins only.
 export async function issueCertificates(formData: FormData) {
-  const { supabase, profile } = await requireStaff();
+  const { supabase, profile } = await requireAdmin();
   const to = str(formData, "return_to");
   const ids = formData.getAll("ids").map(String);
   const date = str(formData, "issue_date");
@@ -117,7 +117,7 @@ export async function issueCertificates(formData: FormData) {
 
 // Back to Approved. The student can no longer collect it.
 export async function withdrawCertificates(formData: FormData) {
-  const { supabase } = await requireStaff();
+  const { supabase } = await requireAdmin();
   const to = str(formData, "return_to");
   const ids = formData.getAll("ids").map(String);
   if (!ids.length) back(to, "error", "Tick at least one student first.");
@@ -129,7 +129,7 @@ export async function withdrawCertificates(formData: FormData) {
 
 // Takes students off the list. Only students who are still Approved, so an issued certificate is never removed by accident.
 export async function removeCertificates(formData: FormData) {
-  const { supabase } = await requireStaff();
+  const { supabase } = await requireAdmin();
   const to = str(formData, "return_to");
   const ids = formData.getAll("ids").map(String);
   if (!ids.length) back(to, "error", "Tick at least one student first.");
