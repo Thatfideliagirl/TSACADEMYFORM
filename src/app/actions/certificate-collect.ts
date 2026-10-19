@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getForm } from "@/lib/submit-data";
 import type { Boxes } from "@/lib/certificate-render";
+import { certificateNumber } from "@/lib/certificate-number";
 
 const NOT_REGISTERED = "This name and email are not registered for this cohort. Use the exact name and email you registered with. If you think this is a mistake, contact your cohort lead.";
 const normName = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
@@ -11,7 +12,7 @@ const normName = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
 export type CollectResult =
   | { ok: false; error: string }
   | { ok: true; state: "none" | "approved"; name: string }
-  | { ok: true; state: "issued"; name: string; issueDate: string; courseId: string; version: string; width: number; height: number; boxes: Boxes; fileName: string };
+  | { ok: true; state: "issued"; name: string; issueDate: string; courseId: string; version: string; width: number; height: number; boxes: Boxes; fileName: string; certificateNo: string };
 
 // A student asks for their own certificate. Same name and email check as the submission form, with the same limit on tries.
 // Only a student whose certificate was issued gets anything back.
@@ -35,7 +36,7 @@ export async function findCertificate(input: { formSlug: string; name: string; e
   const { data: student } = await db.from("students").select("id, full_name, full_name_normalised").eq("cohort_course_id", form.id).eq("email", email).maybeSingle();
   if (!student || student.full_name_normalised !== normName(name)) return { ok: false, error: NOT_REGISTERED };
 
-  const { data: cert } = await db.from("certificates").select("status, issue_date").eq("cohort_course_id", form.id).eq("student_id", student.id).maybeSingle();
+  const { data: cert } = await db.from("certificates").select("id, status, issue_date").eq("cohort_course_id", form.id).eq("student_id", student.id).maybeSingle();
   if (!cert) return { ok: true, state: "none", name: student.full_name };
   if (cert.status !== "issued" || !cert.issue_date) return { ok: true, state: "approved", name: student.full_name };
 
@@ -45,6 +46,7 @@ export async function findCertificate(input: { formSlug: string; name: string; e
   return {
     ok: true, state: "issued", name: student.full_name, issueDate: cert.issue_date as string, courseId: cc.course_id as string,
     version: String(tpl.updated_at), width: tpl.width as number, height: tpl.height as number, boxes: tpl.boxes as Boxes,
+    certificateNo: certificateNumber(cert.id as string),
     fileName: `${form.courseName} certificate ${student.full_name}`.replace(/[^A-Za-z0-9 -]/g, "").replace(/\s+/g, "-"),
   };
 }

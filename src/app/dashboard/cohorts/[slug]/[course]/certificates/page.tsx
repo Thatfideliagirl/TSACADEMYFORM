@@ -7,6 +7,7 @@ import { CertificateList } from "@/components/certificate-list";
 import { getCourseContext } from "@/lib/course-context";
 import { siteOrigin } from "@/lib/origin";
 import { formatIssueDate } from "@/lib/certificate-render";
+import { certificateNumber } from "@/lib/certificate-number";
 import { addAllMarkedCapstones } from "@/app/actions/certificates";
 
 type One<T> = T | T[] | null;
@@ -29,7 +30,7 @@ export default async function CertificatesPage({ params, searchParams }: { param
   const link = `${origin}/certificate/${cc.form_slug}`;
   const list = (rows ?? []).map((r) => {
     const st = first(r.students as One<{ full_name: string; email: string }>);
-    return { id: r.id, name: st?.full_name ?? "", email: st?.email ?? "", status: r.status as "approved" | "issued", issueDate: r.issue_date as string | null, shownDate: r.issue_date ? formatIssueDate(r.issue_date, "long") : "" };
+    return { id: r.id, name: st?.full_name ?? "", email: st?.email ?? "", status: r.status as "approved" | "issued", issueDate: r.issue_date as string | null, shownDate: r.issue_date ? formatIssueDate(r.issue_date, "long") : "", number: r.status === "issued" ? certificateNumber(r.id) : "" };
   }).sort((a, b) => a.name.localeCompare(b.name));
   const issued = list.filter((r) => r.status === "issued").length;
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });

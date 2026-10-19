@@ -7,6 +7,7 @@ import { slugify } from "@/lib/slug";
 import { showLagos } from "@/lib/lagos";
 import { siteOrigin } from "@/lib/origin";
 import { formatIssueDate } from "@/lib/certificate-render";
+import { certificateNumber } from "@/lib/certificate-number";
 
 // Downloads a spreadsheet. Uses the signed in person's own access, so they can only export their own courses.
 export const dynamic = "force-dynamic";
@@ -38,14 +39,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (sp.get("certificates") === "1") {
     // Names and emails for the students on the Certificates list, with the link they use to collect. For the mail merge TS Academy already uses.
     const want = sp.get("status") === "approved" ? "approved" : sp.get("status") === "all" ? "all" : "issued";
-    let cq = supabase.from("certificates").select("status, issue_date, students(full_name, email)").eq("cohort_course_id", cc.id);
+    let cq = supabase.from("certificates").select("id, status, issue_date, students(full_name, email)").eq("cohort_course_id", cc.id);
     if (want !== "all") cq = cq.eq("status", want);
     const { data: certs } = await cq;
     const link = `${await siteOrigin()}/certificate/${cc.form_slug}`;
-    header = ["Full name", "Email", "Cohort", "Course", "Status", "Issue date", "Collection link"];
+    header = ["Full name", "Email", "Cohort", "Course", "Status", "Issue date", "Certificate number", "Collection link"];
     rows = (certs ?? []).map((c) => {
       const st = first(c.students as One<{ full_name: string; email: string }>);
-      return [st?.full_name ?? "", st?.email ?? "", cohort.name, course.name, c.status === "issued" ? "Issued" : "Approved", c.issue_date ? formatIssueDate(c.issue_date, "long") : "", link];
+      return [st?.full_name ?? "", st?.email ?? "", cohort.name, course.name, c.status === "issued" ? "Issued" : "Approved", c.issue_date ? formatIssueDate(c.issue_date, "long") : "", c.status === "issued" ? certificateNumber(c.id) : "", link];
     }).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
     label = `certificates-${want}`;
   } else if (sp.get("resubmissions") === "1") {

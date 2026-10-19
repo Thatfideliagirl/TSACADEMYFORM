@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { issueCertificates, removeCertificates, withdrawCertificates } from "@/app/actions/certificates";
 
-export type CertRow = { id: string; name: string; email: string; status: "approved" | "issued"; issueDate: string | null; shownDate: string };
+export type CertRow = { id: string; name: string; email: string; status: "approved" | "issued"; issueDate: string | null; shownDate: string; number: string };
 
 // The Certificates list: tick students, choose the issue date, and issue, withdraw or take them off.
 export function CertificateList({ rows, returnTo, defaultDate, canIssue }: { rows: CertRow[]; returnTo: string; defaultDate: string; canIssue: boolean }) {
@@ -66,7 +66,7 @@ export function CertificateList({ rows, returnTo, defaultDate, canIssue }: { row
               <span className="block truncate text-sm text-muted">{r.email}</span>
             </span>
             {r.status === "issued"
-              ? <span className="flex flex-col items-end gap-0.5"><span className="rounded-full bg-[#e1f2e9] px-3 py-1 text-sm font-semibold text-pass">Issued</span><span className="text-xs text-muted">{r.shownDate}</span></span>
+              ? <span className="flex flex-col items-end gap-0.5"><span className="rounded-full bg-[#e1f2e9] px-3 py-1 text-sm font-semibold text-pass">Issued</span><span className="text-xs text-muted">{r.shownDate}</span><span className="font-mono text-xs text-muted">{r.number}</span></span>
               : <span className="rounded-full bg-brand px-3 py-1 text-sm font-semibold text-white">Approved</span>}
           </li>
         ))}
