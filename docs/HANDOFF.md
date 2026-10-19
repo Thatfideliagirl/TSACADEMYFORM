@@ -87,11 +87,12 @@ The open check (`src/lib/link-open.ts`) says "locked" only on a clear sign (Goog
 
 Admin adds an email, the system makes a single use invite code (stored hashed with scrypt, shown once). The person signs up with email and code, chooses a password, then signs in normally. Staff are identified from the saved session (`getSession`) and every database read is still checked by Row Level Security against the same token.
 
-## Features added late (in the SQL files 0005 to 0007)
+## Features added late (in the SQL files 0005 to 0008)
 
 1. Notification bell: `profiles.notifications_seen_at`, read through `/api/notifications`.
 2. Resubmission: `submissions.resubmit_*` columns, the Resubmissions tab, per link switches while marking.
 3. Feedback emailed tick: `submissions.resubmit_emailed_at` and `resubmit_emailed_by`.
+4. Certificates (0008): `certificate_templates` (one picture per course, stored as a resized JPEG data address in the database, with the position, size, font and colour of the name and the date) and `certificates` (students approved or issued per cohort course). Staff add marked capstones from Submissions or the Certificates tab and issue on a chosen date. Students collect at `/certificate/<form_slug>`; the certificate is drawn on a canvas in the browser and saved as a PDF with `pdf-lib`. The blank template is served by `/api/certificate-template/<course id>` (it holds no personal data). Storing the picture in the database was chosen to avoid setting up file storage. Supabase Storage would be the better home if many or large templates are added.
 
 ## Known limits and things to look at first
 
@@ -107,4 +108,4 @@ Admin adds an email, the system makes a single use invite code (stored hashed wi
 
 ## Ideas that were discussed and not built
 
-Email to the moderator on each new submission, an optional email code check for students, deadlines that close tasks automatically with late flags, a certificate flow for graded capstones, and hosting on a TS Academy address.
+Email to the moderator on each new submission, an optional email code check for students, deadlines that close tasks automatically with late flags, and hosting on a TS Academy address.
