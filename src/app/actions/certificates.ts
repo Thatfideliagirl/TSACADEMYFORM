@@ -127,9 +127,9 @@ export async function withdrawCertificates(formData: FormData) {
   back(to, "ok", "Withdrawn. They are back to Approved and cannot collect yet.");
 }
 
-// Takes students off the list. Only students who are still Approved, so an issued certificate is never removed by accident.
+// Takes students off the list. Admins and moderators can. Only students who are still Approved, so an issued certificate is never removed by accident.
 export async function removeCertificates(formData: FormData) {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await requireStaff();
   const to = str(formData, "return_to");
   const ids = formData.getAll("ids").map(String);
   if (!ids.length) back(to, "error", "Tick at least one student first.");
