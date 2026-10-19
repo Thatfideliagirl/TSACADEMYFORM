@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { BackLink } from "@/components/back-link";
 import { Banner } from "@/components/banner";
 import { CopyButton } from "@/components/copy-button";
@@ -19,8 +18,8 @@ export default async function CertificatesPage({ params, searchParams }: { param
   const { error, ok } = await searchParams;
   const { supabase, profile, cohort, course, cc } = await getCourseContext(slug, courseSlug);
   const base = `/dashboard/cohorts/${cohort.slug}/${course.slug}`;
-  // Only admins issue certificates. Moderators add students from Submissions.
-  if (profile.role !== "admin") redirect(base);
+  // Admins do everything here. Moderators can only see the list and take students off it while they are Approved.
+  const isAdmin = profile.role === "admin";
 
   const [{ data: rows }, { data: tpl }, origin] = await Promise.all([
     supabase.from("certificates").select("id, status, issue_date, students(full_name, email)").eq("cohort_course_id", cc.id).order("added_at"),
@@ -46,13 +45,14 @@ export default async function CertificatesPage({ params, searchParams }: { param
       <CourseNav base={base} active="certificates" />
       <Banner error={error} ok={ok} />
 
-      {!tpl && (
+      {isAdmin && !tpl && (
         <div className="rounded-2xl border-[1.5px] border-brand bg-sky px-5 py-4">
           <p className="font-semibold">This course has no certificate template yet.</p>
           <p className="mt-1 text-sm">Add it once on the Courses page. Every cohort of this course will use it. <Link href={`/dashboard/courses/${course.id}/certificate`} className="font-semibold text-brand underline">Add the template</Link></p>
         </div>
       )}
 
+      {isAdmin && (
       <section className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-5">
         <h2 className="font-display text-xl font-semibold">Collection link</h2>
         <div className="flex items-center gap-2 rounded-xl bg-sky px-3 py-2.5">
@@ -61,18 +61,22 @@ export default async function CertificatesPage({ params, searchParams }: { param
         </div>
         <p className="text-sm text-muted">Send this link to the students after you issue their certificates, from your own email. Each student types their full name and email, and downloads their own certificate. Students who are not issued yet see that it is not ready.</p>
       </section>
+      )}
 
       <section className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted"><span className="font-semibold text-ink">{list.length}</span> on the list, <span className="font-semibold text-ink">{issued}</span> issued</p>
+        {isAdmin && (
         <form action={addAllMarkedCapstones} className="flex flex-wrap items-center gap-3">
           <input type="hidden" name="cohort_course_id" value={cc.id} />
           <input type="hidden" name="return_to" value={here} />
           <button className="rounded-xl border-[1.5px] border-brand px-4 py-2 font-semibold text-brand hover:bg-sky">Add all marked capstones</button>
         </form>
+        )}
       </section>
 
-      <CertificateList rows={list} returnTo={here} defaultDate={today} />
+      <CertificateList rows={list} returnTo={here} defaultDate={today} canIssue={isAdmin} />
 
+      {isAdmin && (
       <form action={`${base}/export`} method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-4">
         <input type="hidden" name="certificates" value="1" />
         <div className="flex min-w-[10rem] flex-1 flex-col gap-1">
@@ -89,6 +93,7 @@ export default async function CertificatesPage({ params, searchParams }: { param
         </div>
         <button className="rounded-xl border-[1.5px] border-brand px-4 py-2 font-semibold text-brand hover:bg-sky">Download list</button>
       </form>
+      )}
     </div>
   );
 }
