@@ -14,7 +14,7 @@ export type TaskValues = {
 const field = "rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 focus:border-brand focus:outline-none";
 
 export function TaskForm({ ctx, task, hasSubmissions, types }: {
-  ctx: { cohortCourseId: string; cohortSlug: string; courseSlug: string; formSlug?: string }; task?: TaskValues; hasSubmissions?: boolean; types: { key: string; label: string }[];
+  ctx: { cohortCourseId: string; cohortSlug: string; courseSlug: string; formSlug?: string }; task?: TaskValues; hasSubmissions?: boolean; types: { key: string; label: string; more?: boolean }[];
 }) {
   const v: TaskValues = task ?? { kind: "assignment", title: "", instructions: "", max_score: 100, required_links: [], is_open: true, opens_at: null, closes_at: null };
   const { state, pending, onSubmit } = useKeepValues(saveTask);
@@ -66,14 +66,27 @@ export function TaskForm({ ctx, task, hasSubmissions, types }: {
         <p className="text-sm text-muted">
           {hasSubmissions ? "Some students have already submitted. You can still change this list. Links they already sent are kept and still show when you mark. Need a different kind? Add it on the Tasks page first." : "Tick every kind of link this task needs. Each one gets its own box on the form. Need a different kind? Add it on the Tasks page first."}
         </p>
-        <div className="mt-1 grid gap-2 sm:grid-cols-2">
-          {types.map(({ key: k, label }) => (
-            <label key={k} className={`flex items-center gap-3 rounded-xl border-[1.5px] border-line bg-white px-4 py-3 font-medium has-[:checked]:border-brand has-[:checked]:bg-sky cursor-pointer`}>
+        {(() => {
+          const box = ({ key: k, label }: { key: string; label: string }) => (
+            <label key={k} className="flex cursor-pointer items-center gap-3 rounded-xl border-[1.5px] border-line bg-white px-4 py-3 font-medium has-[:checked]:border-brand has-[:checked]:bg-sky">
               <input type="checkbox" name="link" value={k} defaultChecked={v.required_links.includes(k)} className="h-5 w-5 accent-brand" />
               {label}
             </label>
-          ))}
-        </div>
+          );
+          const common = types.filter((t) => !t.more);
+          const more = types.filter((t) => t.more);
+          return (
+            <>
+              <div className="mt-1 grid gap-2 sm:grid-cols-2">{common.map(box)}</div>
+              {more.length > 0 && (
+                <details className="mt-1 rounded-xl border border-line" open={more.some((t) => v.required_links.includes(t.key))}>
+                  <summary className="cursor-pointer px-4 py-3 font-semibold text-brand">More kinds of link ({more.length})</summary>
+                  <div className="grid gap-2 p-3 sm:grid-cols-2">{more.map(box)}</div>
+                </details>
+              )}
+            </>
+          );
+        })()}
       </fieldset>
 
       <label className="flex items-center gap-3 font-medium">

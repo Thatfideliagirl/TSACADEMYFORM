@@ -1,12 +1,14 @@
 import { requireAdmin } from "@/lib/staff";
 import { BackLink } from "@/components/back-link";
-import { InviteForm, NewCodeButton } from "@/components/invite-forms";
+import { Banner } from "@/components/banner";
+import { CancelInviteButton, InviteForm, NewCodeButton, RemoveStaffButton } from "@/components/invite-forms";
 
 type One<T> = T | T[] | null;
 const first = <T,>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v);
 
-export default async function PeoplePage() {
-  const { supabase } = await requireAdmin();
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ error?: string; ok?: string }> }) {
+  const { error, ok } = await searchParams;
+  const { supabase, profile: me } = await requireAdmin();
 
   const [{ data: staff }, { data: invites }, { data: rows }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, cohort_course_moderators(cohort_course_id, cohort_courses(cohorts(name), courses(name)))").order("full_name"),
@@ -29,6 +31,8 @@ export default async function PeoplePage() {
         <p className="mt-2 max-w-2xl text-muted">Add the email of the person you want to invite. You get a one time code to give them. They use it to create their own password.</p>
       </div>
 
+      <Banner error={error} ok={ok} />
+
       <section className="rounded-2xl border border-line bg-white p-6 sm:p-8">
         <h2 className="mb-5 font-display text-2xl font-semibold">Invite someone</h2>
         <InviteForm groups={groups} />
@@ -41,7 +45,10 @@ export default async function PeoplePage() {
             {invites.map((i) => (
               <li key={i.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line bg-white px-4 py-3">
                 <div><p className="font-semibold">{i.email}</p><p className="text-sm text-muted">{i.role}, invited {new Date(i.created_at).toLocaleDateString()}</p></div>
-                <NewCodeButton email={i.email} role={i.role} label="Make a new code" />
+                <div className="flex flex-wrap items-start justify-end gap-2">
+                  <NewCodeButton email={i.email} role={i.role} label="Make a new code" />
+                  <CancelInviteButton id={i.id} />
+                </div>
               </li>
             ))}
           </ul>
@@ -66,7 +73,10 @@ export default async function PeoplePage() {
                   </ul>
                 )}
               </div>
-              <NewCodeButton email={s.email} role={s.role} label="Locked out? New code" />
+              <div className="flex flex-wrap items-start justify-end gap-2">
+                <NewCodeButton email={s.email} role={s.role} label="Locked out? New code" />
+                {s.role === "moderator" && s.id !== me.id && <RemoveStaffButton id={s.id} name={s.full_name} />}
+              </div>
             </li>
           ))}
         </ul>
