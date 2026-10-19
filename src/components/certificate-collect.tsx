@@ -92,7 +92,7 @@ function Ready({ data, onBack }: { data: Issued; onBack: () => void }) {
       const c = canvas.current;
       if (stale || !c) return;
       c.width = data.width; c.height = data.height;
-      drawCertificate(c.getContext("2d")!, el, data.width, data.height, data.boxes, data.name, formatIssueDate(data.issueDate, data.boxes.dateFormat));
+      drawCertificate(c.getContext("2d")!, el, data.width, data.height, data.boxes, data.name, formatIssueDate(data.issueDate, data.boxes.dateFormat), data.certificateNo);
       setShown(true);
     };
     el.onerror = () => { if (!stale) setProblem("The certificate picture could not be loaded. Refresh the page and try again."); };

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireStaff } from "@/lib/staff";
-import { DEFAULT_BOXES, type Box, type Boxes, type DateFormat } from "@/lib/certificate-render";
+import { DEFAULT_BOXES, DEFAULT_NUMBER_BOX, type Box, type Boxes, type DateFormat } from "@/lib/certificate-render";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const back = (to: string, kind: "error" | "ok", message: string): never => {
@@ -30,7 +30,8 @@ export async function saveTemplate(input: { courseId: string; image?: string; wi
   const { supabase, profile } = await requireAdmin();
   const boxes: Boxes = {
     name: cleanBox(input.boxes?.name, DEFAULT_BOXES.name), date: cleanBox(input.boxes?.date, DEFAULT_BOXES.date),
-    dateFormat: (["long", "short", "numeric"].includes(String(input.boxes?.dateFormat)) ? input.boxes.dateFormat : "long") as DateFormat,
+    ...(input.boxes?.number ? { number: cleanBox(input.boxes.number, DEFAULT_NUMBER_BOX) } : {}),
+    dateFormat: (["long", "short", "numeric", "us"].includes(String(input.boxes?.dateFormat)) ? input.boxes.dateFormat : "long") as DateFormat,
   };
   const row: Record<string, unknown> = { course_id: input.courseId, boxes, updated_at: new Date().toISOString(), updated_by: profile.id };
   if (input.image) {

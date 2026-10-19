@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { saveTemplate } from "@/app/actions/certificates";
 import { CERT_FONT_CLASS, CERT_FONTS } from "@/lib/certificate-fonts";
-import { DEFAULT_BOXES, drawCertificate, formatIssueDate, loadCertificateFonts, type Box, type Boxes, type DateFormat } from "@/lib/certificate-render";
+import { DEFAULT_BOXES, DEFAULT_NUMBER_BOX, drawCertificate, formatIssueDate, loadCertificateFonts, type Box, type Boxes, type DateFormat } from "@/lib/certificate-render";
 
 type Initial = { url: string; width: number; height: number; boxes: Boxes } | null;
-type Which = "name" | "date";
+type Which = "name" | "date" | "number";
+const SAMPLE_NUMBER = "TSRJ7C7W89W7B5";
 
 const field = "rounded-xl border-[1.5px] border-line bg-white px-3 py-2 focus:border-brand focus:outline-none";
 const SAMPLE = { short: "Adaeze Okafor", long: "Oluwaseun Adebayo-Johnson Chukwuemeka" };
@@ -53,9 +54,9 @@ export function TemplateEditor({ courseId, initial }: { courseId: string; initia
       if (stale) return;
       c.width = img.width; c.height = img.height;
       const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });
-      const drawn = drawCertificate(c.getContext("2d")!, img.el, img.width, img.height, boxes, sample, formatIssueDate(today, boxes.dateFormat));
+      const drawn = drawCertificate(c.getContext("2d")!, img.el, img.width, img.height, boxes, sample, formatIssueDate(today, boxes.dateFormat), SAMPLE_NUMBER);
       // A faint outline around the part being moved, so it is easy to find.
-      const hit = drawn[active];
+      const hit = active === "number" ? drawn.number : drawn[active];
       if (hit) { const ctx = c.getContext("2d")!; ctx.save(); ctx.strokeStyle = "#1A5BB8"; ctx.setLineDash([12, 8]); ctx.lineWidth = Math.max(2, img.width / 500); ctx.strokeRect(hit.x - 12, hit.y - 8, hit.w + 24, hit.h + 16); ctx.restore(); }
     });
     return () => { stale = true; };
@@ -78,11 +79,11 @@ export function TemplateEditor({ courseId, initial }: { courseId: string; initia
     if (!dragging.current || !canvas.current) return;
     const r = canvas.current.getBoundingClientRect();
     const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
-    setBoxes((b) => ({ ...b, [active]: { ...b[active], x, y } }));
+    setBoxes((b) => ({ ...b, [active]: { ...(b[active] ?? DEFAULT_NUMBER_BOX), x, y } }));
   };
 
-  const set = (patch: Partial<Box>) => setBoxes((b) => ({ ...b, [active]: { ...b[active], ...patch } }));
-  const box = boxes[active];
+  const set = (patch: Partial<Box>) => setBoxes((b) => ({ ...b, [active]: { ...(b[active] ?? DEFAULT_NUMBER_BOX), ...patch } }));
+  const box = boxes[active] ?? DEFAULT_NUMBER_BOX;
   const bold = CERT_FONTS.find((f) => f.key === box.font)?.bold ?? false;
 
   function save() {
@@ -117,14 +118,21 @@ export function TemplateEditor({ courseId, initial }: { courseId: string; initia
           </div>
 
           <div className="flex flex-col gap-4 rounded-2xl border border-line bg-white p-4">
-            <div role="radiogroup" aria-label="Which text to edit" className="grid grid-cols-2 gap-2">
-              {(["name", "date"] as const).map((w) => (
-                <button key={w} type="button" role="radio" aria-checked={active === w} onClick={() => setActive(w)}
-                  className={`rounded-xl border-[1.5px] px-3 py-2 font-semibold ${active === w ? "border-brand bg-sky text-brand" : "border-line"}`}>
-                  {w === "name" ? "Student name" : "Date of issue"}
+            <div role="radiogroup" aria-label="Which text to edit" className="grid grid-cols-3 gap-2">
+              {(["name", "date", "number"] as const).map((w) => (
+                <button key={w} type="button" role="radio" aria-checked={active === w}
+                  onClick={() => { if (w === "number" && !boxes.number) setBoxes((b) => ({ ...b, number: DEFAULT_NUMBER_BOX })); setActive(w); }}
+                  className={`rounded-xl border-[1.5px] px-2 py-2 text-sm font-semibold ${active === w ? "border-brand bg-sky text-brand" : "border-line"}`}>
+                  {w === "name" ? "Student name" : w === "date" ? "Date of issue" : "Certificate number"}
                 </button>
               ))}
             </div>
+            {active === "number" && (
+              <label className="flex items-start gap-3 text-sm font-medium">
+                <input type="checkbox" checked={!!boxes.number} onChange={(e) => { if (!e.target.checked) { setBoxes((b) => { const { number, ...rest } = b; void number; return rest; }); setActive("name"); } }} className="mt-0.5 h-5 w-5 accent-brand" />
+                <span>Print a certificate number. Each certificate gets its own, like {SAMPLE_NUMBER}. Untick to leave it off.</span>
+              </label>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="font" className="text-sm font-semibold">Font</label>
@@ -148,6 +156,7 @@ export function TemplateEditor({ courseId, initial }: { courseId: string; initia
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="datefmt" className="text-sm font-semibold">How the date is written</label>
                 <select id="datefmt" value={boxes.dateFormat} onChange={(e) => setBoxes((b) => ({ ...b, dateFormat: e.target.value as DateFormat }))} className={field}>
+                  <option value="us">October 20, 2026</option>
                   <option value="long">20 October 2026</option>
                   <option value="short">20 Oct 2026</option>
                   <option value="numeric">20/10/2026</option>

@@ -10,8 +10,9 @@ export type Box = {
   bold: boolean;
   color: string;
 };
-export type DateFormat = "long" | "short" | "numeric";
-export type Boxes = { name: Box; date: Box; dateFormat: DateFormat };
+export type DateFormat = "long" | "short" | "numeric" | "us";
+// The number box is optional. Templates saved before it existed have none, and print no number.
+export type Boxes = { name: Box; date: Box; number?: Box; dateFormat: DateFormat };
 
 export const DEFAULT_BOXES: Boxes = {
   name: { x: 0.5, y: 0.47, size: 0.055, maxWidth: 0.7, font: "cormorant", bold: true, color: "#0F2544" },
@@ -19,10 +20,14 @@ export const DEFAULT_BOXES: Boxes = {
   dateFormat: "long",
 };
 
+// Where a certificate number goes if the template asks for one: small and grey, near the top in the middle.
+export const DEFAULT_NUMBER_BOX: Box = { x: 0.5, y: 0.15, size: 0.012, maxWidth: 0.3, font: "montserrat", bold: false, color: "#7B8699" };
+
 // "2026-10-20" becomes "20 October 2026". The date is read as a plain day, so no time zone can move it.
 export function formatIssueDate(iso: string, format: DateFormat): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
+  if (format === "us") return date.toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" }).replace(/^(\w+) /, `$1 ${String(d).padStart(2, "0")}, `);
   if (format === "numeric") return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
   return date.toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: format === "long" ? "long" : "short", year: "numeric" });
 }
@@ -32,7 +37,7 @@ const familyOf = (key: FontKey) => CERT_FONTS.find((f) => f.key === key)?.family
 // Makes sure the fonts are ready before drawing, otherwise the browser quietly uses a plain font.
 export async function loadCertificateFonts(boxes: Boxes) {
   if (typeof document === "undefined" || !document.fonts) return;
-  await Promise.all([boxes.name, boxes.date].map((b) => document.fonts.load(`${b.bold ? 700 : 400} 40px ${familyOf(b.font)}`, "Aa").catch(() => [])));
+  await Promise.all([boxes.name, boxes.date, ...(boxes.number ? [boxes.number] : [])].map((b) => document.fonts.load(`${b.bold ? 700 : 400} 40px ${familyOf(b.font)}`, "Aa").catch(() => [])));
 }
 
 function writeText(ctx: CanvasRenderingContext2D, width: number, height: number, box: Box, text: string) {
@@ -53,8 +58,12 @@ function writeText(ctx: CanvasRenderingContext2D, width: number, height: number,
 }
 
 // Draws the template and writes the name and the date on it. Returns where each text landed (used by the editor).
-export function drawCertificate(ctx: CanvasRenderingContext2D, img: CanvasImageSource, width: number, height: number, boxes: Boxes, name: string, dateText: string) {
+export function drawCertificate(ctx: CanvasRenderingContext2D, img: CanvasImageSource, width: number, height: number, boxes: Boxes, name: string, dateText: string, numberText = "") {
   ctx.clearRect(0, 0, width, height);
   ctx.drawImage(img, 0, 0, width, height);
-  return { name: writeText(ctx, width, height, boxes.name, name), date: writeText(ctx, width, height, boxes.date, dateText) };
+  return {
+    name: writeText(ctx, width, height, boxes.name, name),
+    date: writeText(ctx, width, height, boxes.date, dateText),
+    number: boxes.number ? writeText(ctx, width, height, boxes.number, numberText) : null,
+  };
 }
