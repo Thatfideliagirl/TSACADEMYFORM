@@ -10,7 +10,7 @@ import { hostOf, type LinkDef } from "@/lib/link-types";
 export type OpenStatus = "open" | "locked" | "unknown";
 
 const UA = "Mozilla/5.0 (compatible; TSAcademySubmit/1.0; link check)";
-const LOGIN_HINT = /(accounts\.google\.com|\/servicelogin|\/login|\/signin|\/sign-in|\/sign_in|\/sso\b|\/auth\b)/i;
+const LOGIN_HINT = /(accounts\.google\.com|login\.microsoftonline\.com|login\.live\.com|\/servicelogin|\/login|\/signin|\/sign-in|\/sign_in|\/sso\b|\/auth\b)/i;
 
 // Only ever fetch real websites, never addresses inside our own network.
 export function isPublicWebsite(raw: string): boolean {
@@ -109,7 +109,7 @@ async function generic(url: string): Promise<OpenStatus> {
 export async function checkOpen(def: LinkDef, url: string): Promise<OpenStatus> {
   if (!isPublicWebsite(url)) return "unknown";
   try {
-    if (["drive", "gdoc", "gsheet", "gslides"].includes(def.key)) return await google(url);
+    if (["drive", "gdoc", "gsheet", "gslides", "gfile", "gform"].includes(def.key)) return await google(url);
     if (def.key === "notion") return await notion(url);
     if (def.key === "trello") return await trello(url);
     return await generic(url);

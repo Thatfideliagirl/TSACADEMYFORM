@@ -2,7 +2,7 @@
 // Built in kinds live here. Staff can also add their own kinds from the Tasks page (stored in the database).
 // Either way, every kind is checked the same way: by the address pattern, or by the website it must come from.
 
-export type LinkDef = { key: string; label: string; hint: string; pattern?: RegExp; domains?: string[]; custom?: boolean };
+export type LinkDef = { key: string; label: string; hint: string; pattern?: RegExp; domains?: string[]; custom?: boolean; more?: boolean };
 export type CustomLinkType = { key: string; label: string; domains: string[]; hint: string };
 
 export const BUILT_IN_TYPES: LinkDef[] = [
@@ -65,6 +65,42 @@ export const BUILT_IN_TYPES: LinkDef[] = [
     key: "miro", label: "Miro board", domains: ["miro.com"],
     hint: "In Miro, click Share, set access to Anyone with the link can view, then copy the link.",
   },
+  // More kinds, shown under "More kinds of link" when setting up a task.
+  { key: "gfile", label: "Google Drive file", hint: "In Google Drive, right click the file, click Share, set General access to Anyone with the link, then copy the link.", pattern: /^https?:\/\/drive\.google\.com\/file\/d\/[\w-]+/i, more: true },
+  { key: "gform", label: "Google Form", hint: "Open the form, click Send, then the link tab, and copy the link. Make sure the form accepts responses from anyone.", pattern: /^https?:\/\/(docs\.google\.com\/forms\/|forms\.gle\/)\S+/i, more: true },
+  { key: "gsites", label: "Google Site", domains: ["sites.google.com"], hint: "In Google Sites, click Publish, choose who can view as Anyone, then copy the published link.", more: true },
+  { key: "looker", label: "Looker Studio report", domains: ["lookerstudio.google.com", "datastudio.google.com"], hint: "In Looker Studio, click Share, set link sharing to Anyone with the link can view, then copy the link.", more: true },
+  { key: "colab", label: "Google Colab notebook", domains: ["colab.research.google.com"], hint: "In Colab, click Share, set General access to Anyone with the link, then copy the link.", more: true },
+  { key: "msfile", label: "Microsoft Word, Excel or PowerPoint file", domains: ["1drv.ms", "onedrive.live.com", "sharepoint.com", "office.com"], hint: "In OneDrive or SharePoint, click Share, choose Anyone with the link can view, then copy the link.", more: true },
+  { key: "msform", label: "Microsoft Form", domains: ["forms.office.com", "forms.microsoft.com"], hint: "Open the form, click Share, choose Anyone can respond, then copy the link.", more: true },
+  { key: "powerbi", label: "Power BI report", domains: ["app.powerbi.com", "powerbi.com"], hint: "Publish the report to the web, then copy the public link.", more: true },
+  { key: "behance", label: "Behance project", domains: ["behance.net"], hint: "Publish the project as Public on Behance, then copy the project address.", more: true },
+  { key: "dribbble", label: "Dribbble shot", domains: ["dribbble.com"], hint: "Open your shot on Dribbble and copy the address from your browser.", more: true },
+  { key: "adobe", label: "Adobe Express or Portfolio", domains: ["express.adobe.com", "adobe.com", "myportfolio.com"], hint: "Share the design or portfolio with Anyone with the link, then copy the link.", more: true },
+  { key: "gitlab", label: "GitLab repository", domains: ["gitlab.com"], hint: "Set the project visibility to Public, then copy the address from your browser.", more: true },
+  { key: "bitbucket", label: "Bitbucket repository", domains: ["bitbucket.org"], hint: "Set the repository to Public, then copy the address from your browser.", more: true },
+  { key: "codepen", label: "CodePen", domains: ["codepen.io"], hint: "Save your pen, then copy its address from your browser.", more: true },
+  { key: "replit", label: "Replit project", domains: ["replit.com"], hint: "Make the project public, then copy its address.", more: true },
+  { key: "kaggle", label: "Kaggle notebook", domains: ["kaggle.com"], hint: "Make the notebook public, then copy its address.", more: true },
+  { key: "website", label: "Published website", domains: ["vercel.app", "netlify.app", "github.io", "pages.dev", "onrender.com", "wixsite.com", "webflow.io", "framer.website", "carrd.co"], hint: "Publish your site, open it in a private window to check it loads, then copy the address.", more: true },
+  { key: "medium", label: "Medium or Substack article", domains: ["medium.com", "substack.com"], hint: "Publish the article, then copy its address.", more: true },
+  { key: "vimeo", label: "Vimeo video", domains: ["vimeo.com"], hint: "Set the video privacy so anyone with the link can watch, then copy the link.", more: true },
+  { key: "dropbox", label: "Dropbox file or folder", domains: ["dropbox.com"], hint: "Click Share, create a link anyone can view, then copy it.", more: true },
+  { key: "linkedin", label: "LinkedIn profile or post", domains: ["linkedin.com"], hint: "Open your profile or post and copy the address from your browser.", more: true },
+  { key: "instagram", label: "Instagram profile or post", domains: ["instagram.com"], hint: "Make the account public, then copy the profile or post link.", more: true },
+  { key: "xposts", label: "X (Twitter) profile or post", domains: ["x.com", "twitter.com"], hint: "Open the profile or post and copy the address from your browser.", more: true },
+  { key: "facebook", label: "Facebook page or post", domains: ["facebook.com", "fb.com"], hint: "Make the page or post public, then copy its link.", more: true },
+  { key: "tiktok", label: "TikTok video or profile", domains: ["tiktok.com"], hint: "Make the account public, then copy the link.", more: true },
+  { key: "airtable", label: "Airtable base or view", domains: ["airtable.com"], hint: "Click Share, create a shared view link anyone can open, then copy it.", more: true },
+  { key: "clickup", label: "ClickUp", domains: ["clickup.com"], hint: "Open the share options, turn on public sharing, then copy the link.", more: true },
+  { key: "asana", label: "Asana project", domains: ["asana.com"], hint: "Share the project with a link anyone can view, then copy it.", more: true },
+  { key: "monday", label: "monday.com board", domains: ["monday.com"], hint: "Click Share, enable sharing with anyone with the link, then copy it.", more: true },
+  { key: "coda", label: "Coda doc", domains: ["coda.io"], hint: "Click Share, turn on Publish to web, then copy the link.", more: true },
+  { key: "lucid", label: "Lucid diagram", domains: ["lucid.app", "lucidchart.com"], hint: "Click Share, set the link so anyone can view, then copy it.", more: true },
+  { key: "whimsical", label: "Whimsical board", domains: ["whimsical.com"], hint: "Click Share, set the link so anyone can view, then copy it.", more: true },
+  { key: "padlet", label: "Padlet", domains: ["padlet.com"], hint: "Open Share, set the privacy to Public, then copy the link.", more: true },
+  { key: "prezi", label: "Prezi presentation", domains: ["prezi.com"], hint: "Click Share, make it viewable by anyone with the link, then copy it.", more: true },
+  { key: "pitch", label: "Pitch presentation", domains: ["pitch.com"], hint: "Click Share, turn on link sharing for anyone, then copy it.", more: true },
 ];
 
 export const DEFAULT_CUSTOM_HINT = "Make sure the link opens for anyone without signing in, then copy it.";
